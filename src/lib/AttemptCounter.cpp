@@ -11,7 +11,9 @@ void AttemptCounter::submit(geode::prelude::EventListener<geode::prelude::web::W
 	using namespace geode::prelude;
 
 	auto APIKey = Mod::get()->getSettingValue<std::string>("API key");
-	std::string urlPath = "/player/heatmap/" + std::to_string(cnt);
+	std::string urlPath = "/players/heatmap/" + std::to_string(cnt);
+
+	log::debug("{}", "POST " + API_URL + urlPath);
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
