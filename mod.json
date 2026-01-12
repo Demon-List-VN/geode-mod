@@ -19,5 +19,10 @@
 			"type": "string",
 			"default": ""
 		}
+	},
+	"links": {
+		"demonlistvn": {
+			"level": {}
+		}
 	}
 }
