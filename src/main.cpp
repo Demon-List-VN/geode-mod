@@ -208,3 +208,56 @@ class $modify(LevelInfoLayer) {
 		return true;
 	}
 };
+
+$on_mod(Loaded) {
+	Loader::get()->queueInMainThread([] {
+		// Register URI handler for opening levels
+		// URI format: demonlistvn://level/123
+		geode::Mod::get()->registerLinkCallback("level", [](std::string const& data) -> Task<Result<>> {
+			int levelID;
+			try {
+				// Parse the level ID from the URI data
+				levelID = std::stoi(data);
+			} catch (std::exception const& e) {
+				co_return Err("Failed to parse level ID: {}", e.what());
+			}
+			
+			// Get the game level manager
+			auto glm = GameLevelManager::sharedState();
+			
+			// Try to get the level from stored levels first
+			auto level = glm->m_onlinelevels->objectForKey(std::to_string(levelID));
+			
+			if (level) {
+				// If we have the level cached, open it directly
+				Loader::get()->queueInMainThread([level] {
+					auto gjLevel = static_cast<GJGameLevel*>(level);
+					auto infoLayer = LevelInfoLayer::create(gjLevel, false);
+					auto scene = CCDirector::sharedDirector()->getRunningScene();
+					if (scene && infoLayer) {
+						scene->addChild(infoLayer);
+					}
+				});
+			} else {
+				// If not cached, we need to fetch it from the server
+				glm->getOnlineLevels(GJSearchObject::create(SearchType::Search, std::to_string(levelID)));
+				
+				// Schedule a callback to check when the level is loaded
+				Loader::get()->queueInMainThread([levelID] {
+					auto glm = GameLevelManager::sharedState();
+					auto level = glm->m_onlinelevels->objectForKey(std::to_string(levelID));
+					if (level) {
+						auto gjLevel = static_cast<GJGameLevel*>(level);
+						auto infoLayer = LevelInfoLayer::create(gjLevel, false);
+						auto scene = CCDirector::sharedDirector()->getRunningScene();
+						if (scene && infoLayer) {
+							scene->addChild(infoLayer);
+						}
+					}
+				}, 1.0f); // Wait 1 second for the level to load
+			}
+			
+			co_return Ok();
+		});
+	});
+}
