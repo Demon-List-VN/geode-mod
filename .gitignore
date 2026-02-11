@@ -58,3 +58,4 @@ build-*/
 .vs/
 
 out_codeql_detected_source_root
+_codeql_detected_source_root
