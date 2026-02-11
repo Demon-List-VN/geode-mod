@@ -1,23 +1,29 @@
 {
-	"geode": "5.0.0-alpha.2",
-	"gd": {
-		"win": "*",
-		"android": "*",
-		"mac": "*",
-		"ios": "*"
-	},
-	"version": "3.1.6-beta.1",
-	"id": "nampe.demonlistvn",
-	"name": "Geometry Dash VN",
-	"developer": "NamPE",
-	"description": "Geometry Dash VN helper mod",
-	"repository": "https://github.com/NamPE286/DemonListVN-geode-mod",
-	"settings": {
-		"API key": {
-			"name": "API key",
-			"description": "Go to DLVN web > Settings to obtain an API key",
-			"type": "string",
-			"default": ""
-		}
-	}
+  "geode": "5.0.0-alpha.2",
+  "gd": {
+    "win": "*",
+    "android": "*",
+    "mac": "*",
+    "ios": "*"
+  },
+  "version": "3.1.6-beta.1",
+  "id": "nampe.demonlistvn",
+  "name": "Geometry Dash VN",
+  "developer": "NamPE",
+  "description": "Geometry Dash VN helper mod",
+  "repository": "https://github.com/Demon-List-VN/geode-mod",
+  "settings": {
+    "API key": {
+      "name": "API key",
+      "description": "Go to GDVN web > Settings to obtain an API key",
+      "type": "string",
+      "default": ""
+    },
+    "show-level-info": {
+      "type": "bool",
+      "name": "Show level info",
+      "description": "Show level's classic/platformer/challenge/featured list info",
+      "default": true
+    }
+  }
 }

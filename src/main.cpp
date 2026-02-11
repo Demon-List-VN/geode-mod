@@ -154,45 +154,50 @@ class $modify(LevelInfoLayer) {
 		}
 
 		int id = level->m_levelID.value();
-		auto loadingLabel = createLabel(level, "...", 0);
 
-		this->addChild(loadingLabel);
+	    auto showLevelInfo = Mod::get()->getSettingValue<bool>("show-level-info");
 
-		web::WebRequest req = web::WebRequest();
-		m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
-			try {
-				loadingLabel->removeFromParent();
+	    if (showLevelInfo) {
+		    auto loadingLabel = createLabel(level, "...", 0);
 
-				if (!res.ok()) {
-					return;
-				}
+		    this->addChild(loadingLabel);
 
-				auto resJson = res.json().unwrap();
+		    web::WebRequest req = web::WebRequest();
+		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
+			    try {
+				    loadingLabel->removeFromParent();
 
-				if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
-					std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-					std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
+				    if (!res.ok()) {
+					    return;
+				    }
 
-					auto btn = ButtonCreator().create({ dl, fl }, level, this);
+				    auto resJson = res.json().unwrap();
 
-					this->addChild(btn);
-				}
-				else if (resJson["rating"].isNumber()) {
-					std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-					auto btn = ButtonCreator().create({ dl }, level, this);
+				    if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
+					    std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
 
-					this->addChild(btn);
-				}
-				else if (resJson["flPt"].isNumber()) {
-					std::string fl = "FL: " + std::to_string(resJson["flPt"].asDouble().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
-					auto btn = ButtonCreator().create({ fl }, level, this);
+					    auto btn = ButtonCreator().create({ dl, fl }, level, this);
 
-					this->addChild(btn);
-				}
-			} catch(...) {
-				loadingLabel->removeFromParent();
-			}
-		});
+					    this->addChild(btn);
+				    }
+				    else if (resJson["rating"].isNumber()) {
+					    std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+					    auto btn = ButtonCreator().create({ dl }, level, this);
+
+					    this->addChild(btn);
+				    }
+				    else if (resJson["flPt"].isNumber()) {
+					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asDouble().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
+					    auto btn = ButtonCreator().create({ fl }, level, this);
+
+					    this->addChild(btn);
+				    }
+			    } catch(...) {
+				    loadingLabel->removeFromParent();
+			    }
+		    });
+	    }
 
 		return true;
 	}
