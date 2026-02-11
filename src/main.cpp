@@ -169,7 +169,6 @@ class $modify(LevelInfoLayer) {
 				auto resJson = res.json().unwrap();
 
 				if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
-					auto tmp = resJson["rating"].asInt();
 					std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
 					std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
 
