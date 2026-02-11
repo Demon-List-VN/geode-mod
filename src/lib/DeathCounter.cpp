@@ -23,6 +23,10 @@ void DeathCounter::submit(geode::async::TaskHolder<geode::utils::web::WebRespons
 	auto APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
 	std::string urlPath = "/deathCount/" + std::to_string(deathData.levelID) + "/" + deathData.serialize();
 
+    if (completed) {
+        urlPath += "?completed";
+    }
+
 	log::debug("{}", "POST " + API_URL + urlPath);
 
 	web::WebRequest req = web::WebRequest();

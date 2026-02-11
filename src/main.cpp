@@ -63,6 +63,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		if (!m_isPracticeMode) {
 			m_fields->eventSubmitter->record(100);
 			m_fields->raidSubmitter->record(100);
+		    m_fields->deathCounter.setCompleted(true);
 		}
 	}
 

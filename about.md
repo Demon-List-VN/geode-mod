@@ -1,7 +1,7 @@
-# Demon List VN
+# Geometry Dash VN
 
-Helper mod for Demon List VN website
+Helper mod for Geometry Dash VN website
 
 # Usage
 
-Go to Demon List VN website > Settings > API > Create new API key. Copy the key to this mod settings.
+Go to Geometry Dash VN website > Settings > API > Create new API key. Copy the key to this mod settings.
