@@ -7,7 +7,7 @@ void AttemptCounter::add() {
 	cnt++;
 }
 
-void AttemptCounter::submit(geode::prelude::EventListener<geode::prelude::web::WebTask>* m_listener) {
+void AttemptCounter::submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder) {
 	using namespace geode::prelude;
 
 	auto APIKey = Mod::get()->getSettingValue<std::string>("API key");
@@ -17,5 +17,5 @@ void AttemptCounter::submit(geode::prelude::EventListener<geode::prelude::web::W
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	m_listener->setFilter(req.post(API_URL + urlPath));
+	holder->spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
 }
