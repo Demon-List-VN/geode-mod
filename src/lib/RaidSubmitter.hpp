@@ -10,7 +10,7 @@ class RaidSubmitter {
 	int levelID = 0;
 	float best = 0;
 	std::atomic<bool> inEvent{ false };
-	EventListener<web::WebTask> getListener, putListener;
+	async::TaskHolder<web::WebResponse> getHolder, putHolder;
 
 	void submit();
 public:

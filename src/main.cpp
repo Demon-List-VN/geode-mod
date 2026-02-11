@@ -10,7 +10,7 @@
 
 using namespace geode::prelude;
 
-EventListener<web::WebTask> attemptCounterListener, deathCounterListener;
+async::TaskHolder<web::WebResponse> attemptCounterHolder, deathCounterHolder;
 
 class $modify(DTPlayLayer, PlayLayer) {
 	struct Fields {
@@ -75,8 +75,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 	void onQuit() {
 		PlayLayer::onQuit();
 
-		m_fields->attemptCounter.submit(&(attemptCounterListener));
-		m_fields->deathCounter.submit(&(deathCounterListener));
+		m_fields->attemptCounter.submit(&(attemptCounterHolder));
+		m_fields->deathCounter.submit(&(deathCounterHolder));
 
 		delete m_fields->eventSubmitter;
 		delete m_fields->raidSubmitter;
@@ -140,7 +140,7 @@ public:
 
 class $modify(LevelInfoLayer) {
 	struct Fields {
-		EventListener<web::WebTask> m_listener;
+		async::TaskHolder<web::WebResponse> m_holder;
 	};
 
 	bool init(GJGameLevel* level, bool a) {
@@ -157,53 +157,42 @@ class $modify(LevelInfoLayer) {
 
 		this->addChild(loadingLabel);
 
-		m_fields->m_listener.bind([this, level, loadingLabel](web::WebTask::Event* e) {
+		web::WebRequest req = web::WebRequest();
+		m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
 			try {
-				if (this == nullptr) {
+				loadingLabel->removeFromParent();
+
+				if (!res.ok()) {
 					return;
 				}
 
-				if (web::WebResponse* res = e->getValue()) {
-					loadingLabel->removeFromParent();
+				auto resJson = res.json().unwrap();
 
-					if (!res->ok()) {
-						return;
-					}
+				if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
+					auto tmp = resJson["rating"].asInt();
+					std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+					std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
 
-					auto resJson = res->json().unwrap();
+					auto btn = ButtonCreator().create({ dl, fl }, level, this);
 
-					if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
-						auto tmp = resJson["rating"].asInt();
-						std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-						std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
-
-						auto btn = ButtonCreator().create({ dl, fl }, level, this);
-
-						this->addChild(btn);
-					}
-					else if (resJson["rating"].isNumber()) {
-						std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-						auto btn = ButtonCreator().create({ dl }, level, this);
-
-						this->addChild(btn);
-					}
-					else if (resJson["flPt"].isNumber()) {
-						std::string fl = "FL: " + std::to_string(resJson["flPt"].asDouble().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
-						auto btn = ButtonCreator().create({ fl }, level, this);
-
-						this->addChild(btn);
-					}
+					this->addChild(btn);
 				}
-				else if (e->isCancelled()) {
-					loadingLabel->removeFromParent();
+				else if (resJson["rating"].isNumber()) {
+					std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+					auto btn = ButtonCreator().create({ dl }, level, this);
+
+					this->addChild(btn);
+				}
+				else if (resJson["flPt"].isNumber()) {
+					std::string fl = "FL: " + std::to_string(resJson["flPt"].asDouble().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
+					auto btn = ButtonCreator().create({ fl }, level, this);
+
+					this->addChild(btn);
 				}
 			} catch(...) {
 				loadingLabel->removeFromParent();
 			}
 		});
-
-		web::WebRequest req = web::WebRequest();
-		m_fields->m_listener.setFilter(req.get(API_URL + "/levels/" + std::to_string(id)));
 
 		return true;
 	}

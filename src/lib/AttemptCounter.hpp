@@ -8,5 +8,5 @@ private:
 	size_t cnt;
 public:
 	void add();
-	void submit(geode::prelude::EventListener<geode::prelude::web::WebTask>* m_listener);
+	void submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder);
 };

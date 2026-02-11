@@ -13,7 +13,7 @@ void DeathCounter::add(int percent) {
 	deathData.addDeathCount(percent);
 }
 
-void DeathCounter::submit(geode::prelude::EventListener<geode::prelude::web::WebTask>* m_listener) {
+void DeathCounter::submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder) {
 	if (deathData.completed) {
 		return;
 	}
@@ -27,7 +27,7 @@ void DeathCounter::submit(geode::prelude::EventListener<geode::prelude::web::Web
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	m_listener->setFilter(req.post(API_URL + urlPath));
+	holder->spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
 
 	std::cout << "DLVN: Sending attempt...";
 }

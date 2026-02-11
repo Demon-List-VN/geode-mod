@@ -6,8 +6,8 @@
 EventSubmitter::EventSubmitter() {}
 
 EventSubmitter::~EventSubmitter() {
-	getListener.disable();
-	putListener.disable();
+	getHolder.cancel();
+	putHolder.cancel();
 }
 
 EventSubmitter::EventSubmitter(int levelID): levelID(levelID) {
@@ -15,14 +15,10 @@ EventSubmitter::EventSubmitter(int levelID): levelID(levelID) {
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent";
 	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
 
-	getListener.bind([this](web::WebTask::Event *e) {
-		if (web::WebResponse *res = e->getValue()) {
-			inEvent.store(res->ok());
-		}
-		});
-
 	req.header("Authorization", "Bearer " + APIKey);
-	getListener.setFilter(req.get(url));
+	getHolder.spawn(req.get(url), [this](web::WebResponse res) {
+		inEvent.store(res.ok());
+	});
 }
 
 void EventSubmitter::submit() {
@@ -35,7 +31,7 @@ void EventSubmitter::submit() {
 	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
 
 	req.header("Authorization", "Bearer " + APIKey);
-	putListener.setFilter(req.put(url));
+	putHolder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
 void EventSubmitter::record(float progress) {
