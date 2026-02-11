@@ -149,12 +149,7 @@ class $modify(LevelInfoLayer) {
 			return false;
 		}
 
-		if (level->m_demonDifficulty != 6 && level->m_demonDifficulty != 5) {
-			return true;
-		}
-
 		int id = level->m_levelID.value();
-
 	    auto showLevelInfo = Mod::get()->getSettingValue<bool>("show-level-info");
 
 	    if (showLevelInfo) {
@@ -172,9 +167,38 @@ class $modify(LevelInfoLayer) {
 				    }
 
 				    auto resJson = res.json().unwrap();
+			        bool isPlatformer = false, isChallenge = false;
+
+			        if (resJson["isPlatformer"].isBool()) {
+                        isPlatformer = resJson["isPlatformer"].asBool().unwrap();
+                    }
+
+			        if (resJson["isChallenge"].isBool()) {
+                        isChallenge = resJson["isChallenge"].asBool().unwrap();
+                    }
+
+			        std::string list;
+
+			        if (!isPlatformer && !isChallenge) {
+                        list = "DL: ";
+                    }
+                    else if (isPlatformer) {
+                        list = "PL: ";
+                    }
+                    else if (isChallenge) {
+                        list = "CL: ";
+                    }
 
 				    if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
-					    std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+					    std::string dl = list + std::to_string(resJson["rating"].asInt().unwrap());
+
+				        if (!isPlatformer && !isChallenge) {
+                            dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+                        }
+                        else if (isPlatformer) {
+                            dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
+                        }
+
 					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
 
 					    auto btn = ButtonCreator().create({ dl, fl }, level, this);
@@ -182,8 +206,16 @@ class $modify(LevelInfoLayer) {
 					    this->addChild(btn);
 				    }
 				    else if (resJson["rating"].isNumber()) {
-					    std::string dl = "DL: " + std::to_string(resJson["rating"].asInt().unwrap()) + " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-					    auto btn = ButtonCreator().create({ dl }, level, this);
+				        std::string dl = list + std::to_string(resJson["rating"].asInt().unwrap());
+
+                        if (!isPlatformer && !isChallenge) {
+                            dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+                        }
+                        else if (isPlatformer) {
+                            dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
+                        }
+
+				        auto btn = ButtonCreator().create({ dl }, level, this);
 
 					    this->addChild(btn);
 				    }
