@@ -57,4 +57,4 @@ build-*/
 # Visual Studio
 .vs/
 
-out
+out_codeql_detected_source_root
