@@ -2,10 +2,12 @@
 #include <Geode/utils/web.hpp>
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
 #include <Geode/modify/LevelInfoLayer.hpp> // DO NOT REMOVE
+#include <Geode/modify/MenuLayer.hpp>
 #include "lib/AttemptCounter.hpp"
 #include "lib/DeathCounter.hpp"
 #include "lib/EventSubmitter.hpp"
 #include "lib/RaidSubmitter.hpp"
+#include "lib/VersionChecker.hpp"
 #include "common.hpp"
 
 using namespace geode::prelude;
@@ -230,6 +232,23 @@ class $modify(LevelInfoLayer) {
 			    }
 		    });
 	    }
+
+		return true;
+	}
+};
+
+class $modify(MenuLayer) {
+	bool init() {
+		if (!MenuLayer::init()) {
+			return false;
+		}
+
+		static bool hasChecked = false;
+
+		if (!hasChecked) {
+			hasChecked = true;
+			VersionChecker::checkForUpdate();
+		}
 
 		return true;
 	}
