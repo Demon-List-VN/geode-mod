@@ -8,7 +8,7 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(BetterInfo VERSION 1.0.0)
+project(GDVN VERSION 1.0.0)
 
 file(GLOB_RECURSE SOURCES
 	src/*.cpp
