@@ -1,16 +1,16 @@
 {
-	"geode": "4.10.0",
+	"geode": "5.0.0-alpha.2",
 	"gd": {
 		"win": "*",
 		"android": "*",
 		"mac": "*",
 		"ios": "*"
 	},
-	"version": "3.1.5",
+	"version": "3.1.6-beta.1",
 	"id": "nampe.demonlistvn",
-	"name": "Demon List VN",
+	"name": "Geometry Dash VN",
 	"developer": "NamPE",
-	"description": "Demon list VN helper mod",
+	"description": "Geometry Dash VN helper mod",
 	"repository": "https://github.com/NamPE286/DemonListVN-geode-mod",
 	"settings": {
 		"API key": {
