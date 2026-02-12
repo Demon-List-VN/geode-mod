@@ -7,6 +7,8 @@ async::TaskHolder<web::WebResponse> VersionChecker::m_holder;
 
 void VersionChecker::checkForUpdate() {
 	web::WebRequest req = web::WebRequest();
+    req.userAgent("geode");
+
 	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [](web::WebResponse res) {
 		try {
 			if (!res.ok()) {
