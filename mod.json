@@ -13,6 +13,10 @@
   "description": "Geometry Dash VN helper mod",
   "repository": "https://github.com/Demon-List-VN/geode-mod",
   "settings": {
+    "login-button": {
+      "type": "custom:LoginSetting",
+      "name": "Account"
+    },
     "api-key": {
       "name": "API key",
       "description": "Go to GDVN web > Settings to obtain an API key",
