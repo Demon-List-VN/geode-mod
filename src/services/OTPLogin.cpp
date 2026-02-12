@@ -9,17 +9,20 @@ bool OTPLogin::isLoggedIn() {
 }
 
 void OTPLogin::showLoginPrompt() {
-	geode::createQuickPopup(
-		"GDVN Login",
-		"Do you want to <cy>login</c> to Geometry Dash VN?",
-		"Later",
-		"Login",
-		[](auto, bool btn2) {
-			if (btn2) {
-				requestOTP();
-			}
-		}
-	);
+    geode::Loader::get()->queueInMainThread([] {
+        geode::createQuickPopup(
+            "GDVN Login",
+            "Do you want to <cy>login</c> to Geometry Dash VN?",
+            "Later",
+            "Login",
+            [](auto, bool btn2) {
+                if (btn2) {
+                    requestOTP();
+                }
+            }
+        );
+    });
+
 }
 
 void OTPLogin::requestOTP() {
@@ -34,22 +37,23 @@ void OTPLogin::requestOTP() {
 			}
 
 			auto json = res.json().unwrap();
-			int code = json["code"].asInt().unwrap();
+			auto code = json["code"].asString().unwrap();
 
-			std::string url = "https://www.gdvn.net/auth/otp/" + std::to_string(code);
-			web::openLinkInBrowser(url);
+			web::openLinkInBrowser("https://www.gdvn.net/auth/otp/" + code);
 
-			geode::createQuickPopup(
-				"GDVN Login",
-				"A browser window has been opened.\nPlease <cy>grant access</c> on the website, then click <cg>Continue</c>.",
-				"Cancel",
-				"Continue",
-				[code](auto, bool btn2) {
-					if (btn2) {
-						checkOTP(code);
-					}
-				}
-			);
+		    geode::Loader::get()->queueInMainThread([code] {
+		        geode::createQuickPopup(
+                    "GDVN Login",
+                    "A browser window has been opened.\n<cy>grant access</c> on the website, then click <cg>Continue</c>.\n Your OTP code is: <cr>" + code + "</c>",
+                    "Cancel",
+                    "Continue",
+                    [code](auto, bool btn2) {
+                        if (btn2) {
+                            checkOTP(code);
+                        }
+                    }
+                );
+		    });
 		} catch (...) {
 			log::warn("Failed to create OTP code: unexpected error");
 			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
@@ -57,9 +61,9 @@ void OTPLogin::requestOTP() {
 	});
 }
 
-void OTPLogin::checkOTP(int code) {
+void OTPLogin::checkOTP(std::string code) {
 	web::WebRequest req;
-	std::string url = API_URL + "/auth/otp/" + std::to_string(code);
+	std::string url = API_URL + "/auth/otp/" + code;
 
 	m_get_holder.spawn(req.get(url), [](web::WebResponse res) {
 		try {

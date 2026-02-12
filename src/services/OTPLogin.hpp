@@ -10,7 +10,7 @@ class OTPLogin {
 public:
 	static void showLoginPrompt();
 	static void requestOTP();
-	static void checkOTP(int code);
+	static void checkOTP(std::string code);
 	static void logout();
 	static bool isLoggedIn();
 };
