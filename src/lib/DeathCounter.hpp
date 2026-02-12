@@ -8,11 +8,12 @@ class DeathCounter {
 private:
 	DeathData deathData;
     bool completed = false;
+	geode::async::TaskHolder<geode::utils::web::WebResponse> holder;
 public:
 	DeathCounter();
 	DeathCounter(int id, bool completed);
 	void add(int percent);
-	void submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder);
+	void submit();
     void setCompleted(bool completed) {
         this->completed = completed;
     }

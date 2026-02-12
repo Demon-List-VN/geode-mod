@@ -6,7 +6,8 @@
 class AttemptCounter {
 private:
 	size_t cnt;
+	geode::async::TaskHolder<geode::utils::web::WebResponse> holder;
 public:
 	void add();
-	void submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder);
+	void submit();
 };
