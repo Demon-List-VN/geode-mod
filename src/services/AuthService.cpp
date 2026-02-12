@@ -1,14 +1,19 @@
-#include "OTPLogin.hpp"
+#include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> OTPLogin::m_post_holder, OTPLogin::m_get_holder;
+async::TaskHolder<web::WebResponse> AuthService::m_post_holder, AuthService::m_get_holder;
 
-bool OTPLogin::isLoggedIn() {
-	std::string apiKey = Mod::get()->getSettingValue<std::string>("api-key");
+bool AuthService::isLoggedIn() {
+	std::string apiKey = Mod::get()->getSavedValue<std::string>("api-key");
 	return !apiKey.empty();
 }
 
-void OTPLogin::showLoginPrompt() {
+std::string AuthService::getToken() {
+    std::string apiKey = Mod::get()->getSavedValue<std::string>("api-key");
+    return apiKey;
+}
+
+void AuthService::login() {
     geode::Loader::get()->queueInMainThread([] {
         geode::createQuickPopup(
             "GDVN Login",
@@ -25,7 +30,7 @@ void OTPLogin::showLoginPrompt() {
 
 }
 
-void OTPLogin::requestOTP() {
+void AuthService::requestOTP() {
 	web::WebRequest req;
 
 	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [](web::WebResponse res) {
@@ -44,7 +49,7 @@ void OTPLogin::requestOTP() {
 		    geode::Loader::get()->queueInMainThread([code] {
 		        geode::createQuickPopup(
                     "GDVN Login",
-                    "A browser window has been opened.\n<cy>grant access</c> on the website, then click <cg>Continue</c>.\n Your OTP code is: <cr>" + code + "</c>",
+                    "A browser window has been opened.\n<cy>Grant access</c> on the website, then click <cg>Continue</c>.\n Your OTP code is: <cr>" + code + "</c>",
                     "Cancel",
                     "Continue",
                     [code](auto, bool btn2) {
@@ -61,7 +66,7 @@ void OTPLogin::requestOTP() {
 	});
 }
 
-void OTPLogin::checkOTP(std::string code) {
+void AuthService::checkOTP(std::string code) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/otp/" + code;
 
@@ -84,7 +89,7 @@ void OTPLogin::checkOTP(std::string code) {
 			std::string key = json["key"].asString().unwrap();
 			std::string player = json["player"].asString().unwrap();
 
-			Mod::get()->setSettingValue("api-key", key);
+			Mod::get()->setSavedValue("api-key", key);
 
 			FLAlertLayer::create("GDVN Login", "You are logged in as <cg>" + player + "</c>", "OK")->show();
 		} catch (...) {
@@ -94,7 +99,7 @@ void OTPLogin::checkOTP(std::string code) {
 	});
 }
 
-void OTPLogin::logout() {
-	Mod::get()->setSettingValue("api-key", std::string(""));
+void AuthService::logout() {
+	Mod::get()->setSavedValue("api-key", std::string(""));
 	FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
 }

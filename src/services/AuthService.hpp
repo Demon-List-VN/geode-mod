@@ -5,10 +5,11 @@
 
 using namespace geode::prelude;
 
-class OTPLogin {
+class AuthService {
 	static async::TaskHolder<web::WebResponse> m_post_holder, m_get_holder;
 public:
-	static void showLoginPrompt();
+	static void login();
+    static std::string getToken();
 	static void requestOTP();
 	static void checkOTP(std::string code);
 	static void logout();

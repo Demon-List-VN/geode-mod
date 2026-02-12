@@ -1,7 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include "../services/VersionChecker.hpp"
-#include "../services/OTPLogin.hpp"
+#include "../services/AuthService.hpp"
 
 using namespace geode::prelude;
 
@@ -17,8 +17,8 @@ class $modify(MenuLayer) {
 			hasChecked = true;
 			VersionChecker::checkForUpdate();
 
-			if (!OTPLogin::isLoggedIn()) {
-				OTPLogin::showLoginPrompt();
+			if (!AuthService::isLoggedIn()) {
+				AuthService::login();
 			}
 		}
 
