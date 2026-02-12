@@ -6,16 +6,16 @@
 
 using namespace geode::prelude;
 
-class EventSubmitter {
+class RaidSubmitter {
 	int levelID = 0;
 	float best = 0;
 	std::atomic<bool> inEvent{ false };
-	async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder;
+	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder;
 
 	void submit();
 public:
-	EventSubmitter();
-	~EventSubmitter();
-	EventSubmitter(int levelID);
+	RaidSubmitter();
+	~RaidSubmitter();
+	RaidSubmitter(int levelID);
 	void record(float progress);
 };

@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include "../lib/VersionChecker.hpp"
+#include "../services/VersionChecker.hpp"
 
 using namespace geode::prelude;
 

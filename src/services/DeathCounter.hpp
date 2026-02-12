@@ -4,11 +4,13 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 
+using namespace geode::prelude;
+
 class DeathCounter {
 private:
 	DeathData deathData;
     bool completed = false;
-	geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
+	static geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
 public:
 	DeathCounter();
 	DeathCounter(int id, bool completed);

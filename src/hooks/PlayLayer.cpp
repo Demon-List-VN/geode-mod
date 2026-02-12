@@ -1,10 +1,10 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
-#include "../lib/AttemptCounter.hpp"
-#include "../lib/DeathCounter.hpp"
-#include "../lib/EventSubmitter.hpp"
-#include "../lib/RaidSubmitter.hpp"
+#include "../services/AttemptCounter.hpp"
+#include "../services/DeathCounter.hpp"
+#include "../services/EventSubmitter.hpp"
+#include "../services/RaidSubmitter.hpp"
 
 using namespace geode::prelude;
 

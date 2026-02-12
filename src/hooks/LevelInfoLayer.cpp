@@ -22,7 +22,7 @@ class ButtonCreator {
 public:
 	void onButton(CCObject* sender) {
 		int id = sender->getTag();
-		std::string url = "https://demonlistvn.com/levels/" + std::to_string(id);
+		std::string url = "https://www.gdvn.net/level/" + std::to_string(id);
 
 		web::openLinkInBrowser(url);
 	}

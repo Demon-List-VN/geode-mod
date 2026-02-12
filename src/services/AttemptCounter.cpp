@@ -3,6 +3,8 @@
 #include <Geode/utils/web.hpp>
 #include "../common.hpp"
 
+async::TaskHolder<web::WebResponse> AttemptCounter::m_holder;
+
 void AttemptCounter::add() {
 	cnt++;
 }
@@ -10,7 +12,7 @@ void AttemptCounter::add() {
 void AttemptCounter::submit() {
 	using namespace geode::prelude;
 
-	auto APIKey = Mod::get()->getSettingValue<std::string>("API key");
+	auto APIKey = Mod::get()->getSettingValue<std::string>("api-key");
 	std::string urlPath = "/players/heatmap/" + std::to_string(cnt);
 
 	log::debug("{}", "POST " + API_URL + urlPath);
