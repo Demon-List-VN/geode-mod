@@ -3,6 +3,8 @@
 #include <Geode/utils/web.hpp>
 #include "../common.hpp"
 
+async::TaskHolder<web::WebResponse> DeathCounter::m_holder;
+
 DeathCounter::DeathCounter() {}
 
 DeathCounter::DeathCounter(int id, bool completed) {
@@ -13,25 +15,21 @@ void DeathCounter::add(int percent) {
 	deathData.addDeathCount(percent);
 }
 
-void DeathCounter::submit(geode::async::TaskHolder<geode::utils::web::WebResponse>* holder) {
+void DeathCounter::submit() {
 	if (deathData.completed) {
 		return;
 	}
 
 	using namespace geode::prelude;
 
-	auto APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
+	auto APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("api-key");
 	std::string urlPath = "/deathCount/" + std::to_string(deathData.levelID) + "/" + deathData.serialize();
 
     if (completed) {
         urlPath += "?completed";
     }
 
-	log::debug("{}", "POST " + API_URL + urlPath);
-
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	holder->spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
-
-	std::cout << "DLVN: Sending attempt...";
+	m_holder.spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
 }

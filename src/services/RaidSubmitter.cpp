@@ -3,20 +3,22 @@
 #include <Geode/utils/web.hpp>
 #include "../common.hpp"
 
+async::TaskHolder<web::WebResponse> RaidSubmitter::m_get_holder, RaidSubmitter::m_put_holder;
+
 RaidSubmitter::RaidSubmitter() {}
 
 RaidSubmitter::~RaidSubmitter() {
-	getHolder.cancel();
-	putHolder.cancel();
+	m_get_holder.cancel();
+	m_put_holder.cancel();
 }
 
 RaidSubmitter::RaidSubmitter(int levelID): levelID(levelID) {
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent?type=raid";
-	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
+	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("api-key");
 
 	req.header("Authorization", "Bearer " + APIKey);
-	getHolder.spawn(req.get(url), [this](web::WebResponse res) {
+	m_get_holder.spawn(req.get(url), [this](web::WebResponse res) {
 		inEvent.store(res.ok());
 	});
 }
@@ -28,10 +30,10 @@ void RaidSubmitter::submit() {
 
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/events/submitLevel/" + std::to_string(levelID) + "?progress=" + std::to_string(best) + "&password=" + EVENT_PASSWORD;
-	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
+	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("api-key");
 
 	req.header("Authorization", "Bearer " + APIKey);
-	putHolder.spawn(req.put(url), [](web::WebResponse res) {});
+	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
 void RaidSubmitter::record(float progress) {
