@@ -6,8 +6,8 @@
 RaidSubmitter::RaidSubmitter() {}
 
 RaidSubmitter::~RaidSubmitter() {
-	getHolder.cancel();
-	putHolder.cancel();
+	m_get_holder.cancel();
+	m_put_holder.cancel();
 }
 
 RaidSubmitter::RaidSubmitter(int levelID): levelID(levelID) {
@@ -16,7 +16,7 @@ RaidSubmitter::RaidSubmitter(int levelID): levelID(levelID) {
 	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
 
 	req.header("Authorization", "Bearer " + APIKey);
-	getHolder.spawn(req.get(url), [this](web::WebResponse res) {
+	m_get_holder.spawn(req.get(url), [this](web::WebResponse res) {
 		inEvent.store(res.ok());
 	});
 }
@@ -31,7 +31,7 @@ void RaidSubmitter::submit() {
 	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("API key");
 
 	req.header("Authorization", "Bearer " + APIKey);
-	putHolder.spawn(req.put(url), [](web::WebResponse res) {});
+	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
 void RaidSubmitter::record(float progress) {

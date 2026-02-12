@@ -17,5 +17,5 @@ void AttemptCounter::submit() {
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	holder.spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
+	m_holder.spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
 }

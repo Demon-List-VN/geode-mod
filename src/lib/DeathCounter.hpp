@@ -8,7 +8,7 @@ class DeathCounter {
 private:
 	DeathData deathData;
     bool completed = false;
-	geode::async::TaskHolder<geode::utils::web::WebResponse> holder;
+	geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
 public:
 	DeathCounter();
 	DeathCounter(int id, bool completed);
