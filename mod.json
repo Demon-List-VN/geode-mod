@@ -6,17 +6,16 @@
     "mac": "*",
     "ios": "*"
   },
-  "version": "3.1.6-beta.1",
+  "version": "5.0.0-beta.1",
   "id": "nampe.gdvn",
   "name": "Geometry Dash VN",
   "developer": "NamPE",
   "description": "Geometry Dash VN helper mod",
   "repository": "https://github.com/Demon-List-VN/geode-mod",
   "settings": {
-    "api-key": {
-      "name": "API key",
-      "description": "Go to GDVN web > Settings to obtain an API key",
-      "type": "string",
+    "auth": {
+      "type": "custom:auth",
+      "name": "Authentication",
       "default": ""
     },
     "show-level-info": {

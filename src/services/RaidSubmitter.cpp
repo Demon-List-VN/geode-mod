@@ -1,6 +1,8 @@
 #include "RaidSubmitter.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
+
+#include "AuthService.hpp"
 #include "../common.hpp"
 
 async::TaskHolder<web::WebResponse> RaidSubmitter::m_get_holder, RaidSubmitter::m_put_holder;
@@ -15,7 +17,7 @@ RaidSubmitter::~RaidSubmitter() {
 RaidSubmitter::RaidSubmitter(int levelID): levelID(levelID) {
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent?type=raid";
-	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("api-key");
+	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
 	m_get_holder.spawn(req.get(url), [this](web::WebResponse res) {
@@ -30,7 +32,7 @@ void RaidSubmitter::submit() {
 
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/events/submitLevel/" + std::to_string(levelID) + "?progress=" + std::to_string(best) + "&password=" + EVENT_PASSWORD;
-	std::string APIKey = geode::prelude::Mod::get()->getSettingValue<std::string>("api-key");
+	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
 	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});

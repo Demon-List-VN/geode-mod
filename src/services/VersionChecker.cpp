@@ -30,17 +30,19 @@ void VersionChecker::checkForUpdate() {
 
 			std::string releaseUrl = "https://github.com/Demon-List-VN/geode-mod/releases/latest";
 
-			geode::createQuickPopup(
-				"Update Available",
-				"A new version of <cy>Geometry Dash VN</c> is available!\n\nCurrent: <cr>" + localVersion + "</c>\nLatest: <cg>" + latestVersion + "</c>",
-				"Close",
-				"Download",
-				[releaseUrl](auto, bool btn2) {
-					if (btn2) {
-						web::openLinkInBrowser(releaseUrl);
-					}
-				}
-			);
+		    geode::Loader::get()->queueInMainThread([localVersion, latestVersion, releaseUrl] {
+		        geode::createQuickPopup(
+                    "Update Available",
+                    "A new version of <cy>Geometry Dash VN</c> is available!\n\nCurrent: <cr>" + localVersion + "</c>\nLatest: <cg>" + latestVersion + "</c>",
+                    "Close",
+                    "Download",
+                    [releaseUrl](auto, bool btn2) {
+                        if (btn2) {
+                            web::openLinkInBrowser(releaseUrl);
+                        }
+                    }
+                );
+		    });
 		} catch (...) {
 			log::warn("Failed to check for updates");
 		}
