@@ -11,15 +11,18 @@ class $modify(MenuLayer) {
 			return false;
 		}
 
-		static bool hasChecked = false;
+	    bool loginShown = Mod::get()->getSavedValue<bool>("login-shown", false);
+
+	    if (!loginShown && !AuthService::isLoggedIn()) {
+	        Mod::get()->setSavedValue<bool>("login-shown", true);
+            AuthService::login();
+	    }
+
+	    static bool hasChecked = false;
 
 		if (!hasChecked) {
 			hasChecked = true;
 			VersionChecker::checkForUpdate();
-
-			if (!AuthService::isLoggedIn()) {
-				AuthService::login();
-			}
 		}
 
 		return true;
