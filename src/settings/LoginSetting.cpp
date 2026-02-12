@@ -8,6 +8,7 @@ Result<std::shared_ptr<SettingV3>> LoginSetting::parse(
 	auto root = checkJson(json, "LoginSetting");
 	res->init(key, modID, root);
 	res->parseNameAndDescription(root);
+	res->parseEnableIf(root);
 	root.checkUnknownKeys();
 	return root.ok(std::static_pointer_cast<SettingV3>(res));
 }
@@ -25,11 +26,11 @@ SettingNodeV3* LoginSetting::createNode(float width) {
 
 LoginSettingNode* LoginSettingNode::create(std::shared_ptr<LoginSetting> setting, float width) {
 	auto ret = new LoginSettingNode();
-	if (ret->init(setting, width)) {
+	if (ret && ret->init(setting, width)) {
 		ret->autorelease();
 		return ret;
 	}
-	delete ret;
+	CC_SAFE_DELETE(ret);
 	return nullptr;
 }
 
@@ -39,19 +40,32 @@ bool LoginSettingNode::init(std::shared_ptr<LoginSetting> setting, float width) 
 
 	bool loggedIn = OTPLogin::isLoggedIn();
 
-	auto btnSprite = ButtonSprite::create(loggedIn ? "Logout" : "Login");
-	btnSprite->setScale(0.72f);
+	m_buttonSprite = ButtonSprite::create(loggedIn ? "Logout" : "Login");
+	m_buttonSprite->setScale(0.5f);
 
-	auto btn = CCMenuItemSpriteExtra::create(
-		btnSprite, this,
+	m_button = CCMenuItemSpriteExtra::create(
+		m_buttonSprite, this,
 		loggedIn ? menu_selector(LoginSettingNode::onLogout) : menu_selector(LoginSettingNode::onLogin)
 	);
 
-	this->getButtonMenu()->addChildAtPosition(btn, Anchor::Center);
-	this->setContentSize({ width, 30 });
-	this->updateLayout();
+	this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
+	this->getButtonMenu()->setContentWidth(60);
+	this->getButtonMenu()->updateLayout();
+
+	this->updateState(nullptr);
 
 	return true;
+}
+
+void LoginSettingNode::updateState(CCNode* invoker) {
+	SettingNodeV3::updateState(invoker);
+
+	auto shouldEnable = this->getSetting()->shouldEnable();
+	m_button->setEnabled(shouldEnable);
+	m_buttonSprite->setCascadeColorEnabled(true);
+	m_buttonSprite->setCascadeOpacityEnabled(true);
+	m_buttonSprite->setOpacity(shouldEnable ? 255 : 155);
+	m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
 }
 
 void LoginSettingNode::onLogin(CCObject*) {

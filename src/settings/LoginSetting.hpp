@@ -18,6 +18,11 @@ public:
 
 class LoginSettingNode : public SettingNodeV3 {
 protected:
+	ButtonSprite* m_buttonSprite;
+	CCMenuItemSpriteExtra* m_button;
+
+	bool init(std::shared_ptr<LoginSetting> setting, float width);
+	void updateState(CCNode* invoker) override;
 	void onLogin(CCObject*);
 	void onLogout(CCObject*);
 	void onCommit() override;
@@ -26,5 +31,8 @@ public:
 	bool hasUncommittedChanges() const override;
 	bool hasNonDefaultValue() const override;
 	static LoginSettingNode* create(std::shared_ptr<LoginSetting> setting, float width);
-	bool init(std::shared_ptr<LoginSetting> setting, float width);
+
+	std::shared_ptr<LoginSetting> getSetting() const {
+		return std::static_pointer_cast<LoginSetting>(SettingNodeV3::getSetting());
+	}
 };
