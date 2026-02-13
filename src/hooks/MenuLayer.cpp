@@ -23,6 +23,7 @@ class $modify(MenuLayer) {
 		if (!hasChecked) {
 			hasChecked = true;
 			VersionChecker::checkForUpdate();
+		    AuthService::check();
 		}
 
 		return true;

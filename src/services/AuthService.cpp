@@ -1,5 +1,6 @@
 #include "AuthService.hpp"
 #include "../common.hpp"
+#include <Geode/ui/Notification.hpp>
 
 async::TaskHolder<web::WebResponse> AuthService::m_post_holder, AuthService::m_get_holder;
 
@@ -107,15 +108,58 @@ void AuthService::logout() {
 
     m_post_holder.spawn(req.send("DELETE", url), [](web::WebResponse res) {
         try {
-            if (!res.ok()) {
-                log::warn("Failed to logout: HTTP {}", res.code());
-                return;
-            }
-
             Mod::get()->setSavedValue("api-key", std::string(""));
             FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
         } catch (...) {
             log::warn("Failed to logout: unexpected error");
+        }
+    });
+}
+
+void AuthService::check() {
+    web::WebRequest req;
+    std::string url = API_URL + "/auth/me";
+
+    if (!isLoggedIn()) {
+        return;
+    }
+
+    req.header("Authorization", "Bearer " + getToken());
+
+    auto loadingToast = geode::Notification::create(
+        "Checking GDVN login status...",
+        geode::NotificationIcon::Loading,
+        10.0f
+    );
+
+    loadingToast->show();
+
+    m_get_holder.spawn(req.get(url), [loadingToast](web::WebResponse res) {
+        try {
+            loadingToast->hide();
+
+            if (!res.ok()) {
+                auto errorToast = geode::Notification::create(
+                    "Token expired. Please log back in",
+                    geode::NotificationIcon::Error,
+                    2.0f
+                );
+
+                Mod::get()->setSavedValue("api-key", std::string(""));
+                errorToast->show();
+
+                return;
+            }
+
+            auto successToast = geode::Notification::create(
+            "Logged in as " + res.json().unwrap()["name"].asString().unwrap(),
+                geode::NotificationIcon::Success,
+                2.0f
+            );
+
+            successToast->show();
+        } catch (...) {
+            log::warn("Failed to check: unexpected error");
         }
     });
 }
