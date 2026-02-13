@@ -100,6 +100,22 @@ void AuthService::checkOTP(std::string code) {
 }
 
 void AuthService::logout() {
-	Mod::get()->setSavedValue("api-key", std::string(""));
-	FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
+    web::WebRequest req;
+    std::string url = API_URL + "/APIKey";
+
+    req.header("Authorization", "Bearer " + getToken());
+
+    m_post_holder.spawn(req.send("DELETE", url), [](web::WebResponse res) {
+        try {
+            if (!res.ok()) {
+                log::warn("Failed to logout: HTTP {}", res.code());
+                return;
+            }
+
+            Mod::get()->setSavedValue("api-key", std::string(""));
+            FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
+        } catch (...) {
+            log::warn("Failed to logout: unexpected error");
+        }
+    });
 }
