@@ -120,12 +120,6 @@ void AuthService::check() {
     web::WebRequest req;
     std::string url = API_URL + "/auth/me";
 
-    if (!isLoggedIn()) {
-        return;
-    }
-
-    req.header("Authorization", "Bearer " + getToken());
-
     auto loadingToast = geode::Notification::create(
         "Checking GDVN login status...",
         geode::NotificationIcon::Loading,
@@ -133,6 +127,22 @@ void AuthService::check() {
     );
 
     loadingToast->show();
+
+    if (!isLoggedIn()) {
+        loadingToast->hide();
+
+        auto errorToast = geode::Notification::create(
+            "Not logged in to GDVN",
+            geode::NotificationIcon::Error,
+            2.0f
+        );
+
+        errorToast->show();
+
+        return;
+    }
+
+    req.header("Authorization", "Bearer " + getToken());
 
     m_get_holder.spawn(req.get(url), [loadingToast](web::WebResponse res) {
         try {
