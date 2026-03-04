@@ -18,10 +18,6 @@ void DeathCounter::add(int percent) {
 }
 
 void DeathCounter::submit() {
-	if (deathData.completed) {
-		return;
-	}
-
 	using namespace geode::prelude;
 
 	auto APIKey = AuthService::getToken();

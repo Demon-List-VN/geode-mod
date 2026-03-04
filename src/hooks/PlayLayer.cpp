@@ -39,11 +39,6 @@ class $modify(DTPlayLayer, PlayLayer) {
 			return;
 		}
 
-		if (!m_fields->hasRespawned) {
-			return;
-		}
-
-		m_fields->hasRespawned = false;
 		m_fields->attemptCounter.add();
 
 		if (!m_level->isPlatformer() && !m_isPracticeMode) {
