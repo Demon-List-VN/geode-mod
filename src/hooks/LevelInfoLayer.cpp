@@ -79,18 +79,22 @@ class $modify(LevelInfoLayer) {
 		    this->addChild(loadingLabel);
 
 		    web::WebRequest req = web::WebRequest();
-		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
+		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel, id](web::WebResponse res) mutable {
 			    try {
-				    loadingLabel->removeFromParent();
+                    if (loadingLabel) {
+                        loadingLabel->removeFromParent();
+                        loadingLabel = nullptr;
+                    }
 
 				    if (!res.ok()) {
 					    return;
 				    }
 
 				    auto resJson = res.json().unwrap();
-			        bool isPlatformer = false, isChallenge = false;
+                    bool gameLevelIsPlatformer = level && level->isPlatformer();
+			        bool isPlatformer = gameLevelIsPlatformer, isChallenge = false;
 
-			        if (resJson["isPlatformer"].isBool()) {
+			        if (!gameLevelIsPlatformer && resJson["isPlatformer"].isBool()) {
                         isPlatformer = resJson["isPlatformer"].asBool().unwrap();
                     }
 
@@ -110,44 +114,44 @@ class $modify(LevelInfoLayer) {
                         list = "CL: ";
                     }
 
-				    if (resJson["rating"].isNumber() && resJson["flPt"].isNumber()) {
-					    std::string dl = list + std::to_string(resJson["rating"].asInt().unwrap());
+			        std::vector<std::string> labels;
 
-				        if (!isPlatformer && !isChallenge) {
-                            dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-                        }
-                        else if (isPlatformer) {
-                            dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
-                        }
-
-					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
-
-					    auto btn = ButtonCreator().create({ dl, fl }, level, this);
-
-					    this->addChild(btn);
-				    }
-				    else if (resJson["rating"].isNumber()) {
+			        if (resJson["rating"].isNumber()) {
 				        std::string dl = list + std::to_string(resJson["rating"].asInt().unwrap());
 
-                        if (!isPlatformer && !isChallenge) {
-                            dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
-                        }
-                        else if (isPlatformer) {
-                            dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
+                        if (!isChallenge) {
+                            if (isPlatformer && resJson["plTop"].isNumber()) {
+                                dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
+                            }
+                            else if (resJson["dlTop"].isNumber()) {
+                                dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
+                            }
                         }
 
-				        auto btn = ButtonCreator().create({ dl }, level, this);
+                        labels.push_back(dl);
+                    }
+
+			        if (resJson["flPt"].isNumber()) {
+					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asInt().unwrap());
+
+                        if (resJson["flTop"].isNumber()) {
+                            fl += " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
+                        }
+
+                        labels.push_back(fl);
+                    }
+
+			        if (!labels.empty()) {
+					    auto btn = ButtonCreator().create(labels, level, this);
 
 					    this->addChild(btn);
-				    }
-				    else if (resJson["flPt"].isNumber()) {
-					    std::string fl = "FL: " + std::to_string(resJson["flPt"].asDouble().unwrap()) + " (#" + std::to_string(resJson["flTop"].asInt().unwrap()) + ")";
-					    auto btn = ButtonCreator().create({ fl }, level, this);
-
-					    this->addChild(btn);
-				    }
+                    }
 			    } catch(...) {
-				    loadingLabel->removeFromParent();
+                    if (loadingLabel) {
+                        loadingLabel->removeFromParent();
+                        loadingLabel = nullptr;
+                    }
+                    log::warn("Failed to load GDVN level info for level {}", id);
 			    }
 		    });
 	    }
