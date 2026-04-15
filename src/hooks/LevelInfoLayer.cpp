@@ -79,9 +79,18 @@ class $modify(LevelInfoLayer) {
 		    this->addChild(loadingLabel);
 
 		    web::WebRequest req = web::WebRequest();
-		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel, id](web::WebResponse res) {
+		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel, id](web::WebResponse res) mutable {
+                auto removeLoadingLabel = [&loadingLabel]() {
+                    auto label = loadingLabel;
+                    loadingLabel = nullptr;
+
+                    if (label) {
+                        label->removeFromParent();
+                    }
+                };
+
 			    try {
-                    loadingLabel->removeFromParent();
+                    removeLoadingLabel();
 
 				    if (!res.ok()) {
 					    return;
@@ -144,6 +153,7 @@ class $modify(LevelInfoLayer) {
 					    this->addChild(btn);
                     }
 			    } catch(...) {
+                    removeLoadingLabel();
                     log::warn("Failed to load GDVN level info for level {}", id);
 				    return;
 			    }
