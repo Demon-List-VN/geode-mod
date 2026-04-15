@@ -79,7 +79,7 @@ class $modify(LevelInfoLayer) {
 		    this->addChild(loadingLabel);
 
 		    web::WebRequest req = web::WebRequest();
-		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
+		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel, id](web::WebResponse res) {
 			    try {
                     loadingLabel->removeFromParent();
 
@@ -88,10 +88,10 @@ class $modify(LevelInfoLayer) {
 				    }
 
 				    auto resJson = res.json().unwrap();
-                    bool gameIsPlatformer = level && level->isPlatformer();
-			        bool isPlatformer = gameIsPlatformer, isChallenge = false;
+                    bool levelIsPlatformer = level && level->isPlatformer();
+			        bool isPlatformer = levelIsPlatformer, isChallenge = false;
 
-			        if (!gameIsPlatformer && resJson["isPlatformer"].isBool()) {
+			        if (!levelIsPlatformer && resJson["isPlatformer"].isBool()) {
                         isPlatformer = resJson["isPlatformer"].asBool().unwrap();
                     }
 
@@ -144,6 +144,7 @@ class $modify(LevelInfoLayer) {
 					    this->addChild(btn);
                     }
 			    } catch(...) {
+                    log::warn("Failed to load GDVN level info for level {}", id);
 				    return;
 			    }
 		    });
