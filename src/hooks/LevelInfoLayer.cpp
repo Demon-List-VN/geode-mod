@@ -80,18 +80,18 @@ class $modify(LevelInfoLayer) {
 
 		    web::WebRequest req = web::WebRequest();
 		    m_fields->m_holder.spawn(req.get(API_URL + "/levels/" + std::to_string(id)), [this, level, loadingLabel](web::WebResponse res) {
-			    loadingLabel->removeFromParent();
-
 			    try {
+                    loadingLabel->removeFromParent();
+
 				    if (!res.ok()) {
 					    return;
 				    }
 
 				    auto resJson = res.json().unwrap();
-                    bool levelIsPlatformer = level && level->isPlatformer();
-			        bool isPlatformer = levelIsPlatformer, isChallenge = false;
+                    bool gameIsPlatformer = level && level->isPlatformer();
+			        bool isPlatformer = gameIsPlatformer, isChallenge = false;
 
-			        if (!levelIsPlatformer && resJson["isPlatformer"].isBool()) {
+			        if (!gameIsPlatformer && resJson["isPlatformer"].isBool()) {
                         isPlatformer = resJson["isPlatformer"].asBool().unwrap();
                     }
 
@@ -117,10 +117,11 @@ class $modify(LevelInfoLayer) {
 				        std::string dl = list + std::to_string(resJson["rating"].asInt().unwrap());
 
                         if (!isChallenge) {
-                            auto topField = isPlatformer && resJson["plTop"].isNumber() ? "plTop" : "dlTop";
-
-                            if (resJson[topField].isNumber()) {
-                                dl += " (#" + std::to_string(resJson[topField].asInt().unwrap()) + ")";
+                            if (isPlatformer && resJson["plTop"].isNumber()) {
+                                dl += " (#" + std::to_string(resJson["plTop"].asInt().unwrap()) + ")";
+                            }
+                            else if (resJson["dlTop"].isNumber()) {
+                                dl += " (#" + std::to_string(resJson["dlTop"].asInt().unwrap()) + ")";
                             }
                         }
 
