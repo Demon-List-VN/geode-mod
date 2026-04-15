@@ -9,6 +9,7 @@ async::TaskHolder<web::WebResponse> AttemptCounter::m_holder;
 
 void AttemptCounter::add() {
 	cnt++;
+	log::debug("[GDVN] AttemptCounter::add cnt={}", cnt);
 }
 
 void AttemptCounter::submit() {
@@ -17,9 +18,11 @@ void AttemptCounter::submit() {
 	auto APIKey = AuthService::getToken();
 	std::string urlPath = "/players/heatmap/" + std::to_string(cnt);
 
-	log::debug("{}", "POST " + API_URL + urlPath);
+	log::debug("[GDVN] AttemptCounter::submit cnt={} url={}", cnt, API_URL + urlPath);
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	m_holder.spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
+	m_holder.spawn(req.post(API_URL + urlPath), [count = cnt](web::WebResponse const& res) {
+		log::debug("[GDVN] AttemptCounter::submit completed cnt={} ok={}", count, res.ok());
+	});
 }

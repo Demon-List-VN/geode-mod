@@ -9,14 +9,12 @@ using namespace geode::prelude;
 class DeathCounter {
 private:
 	DeathData deathData;
-    bool completed = false;
+	bool completed = false;
 	static geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
 public:
 	DeathCounter();
 	DeathCounter(int id, bool completed);
 	void add(int percent);
 	void submit();
-    void setCompleted(bool completed) {
-        this->completed = completed;
-    }
+	void setCompleted(bool completed);
 };

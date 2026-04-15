@@ -7,7 +7,7 @@ using namespace geode::prelude;
 
 class AttemptCounter {
 private:
-	size_t cnt;
+	size_t cnt = 0;
 	static geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
 public:
 	void add();
