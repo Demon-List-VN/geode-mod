@@ -88,10 +88,11 @@ class $modify(LevelInfoLayer) {
 				    }
 
 				    auto resJson = res.json().unwrap();
-			        bool isPlatformer = level->isPlatformer(), isChallenge = false;
+                    bool levelIsPlatformer = level && level->isPlatformer();
+			        bool isPlatformer = levelIsPlatformer, isChallenge = false;
 
-			        if (resJson["isPlatformer"].isBool()) {
-                        isPlatformer = isPlatformer || resJson["isPlatformer"].asBool().unwrap();
+			        if (!levelIsPlatformer && resJson["isPlatformer"].isBool()) {
+                        isPlatformer = resJson["isPlatformer"].asBool().unwrap();
                     }
 
 			        if (resJson["isChallenge"].isBool()) {
