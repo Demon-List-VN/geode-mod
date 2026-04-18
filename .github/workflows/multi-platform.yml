@@ -58,25 +58,38 @@ jobs:
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
 
+      - name: Resolve packaged mod file
+        id: asset
+        shell: bash
+        run: |
+          build_output='${{ steps.build.outputs.build-output }}'
+
+          if [ -f "$build_output" ]; then
+            asset_path="$build_output"
+          else
+            mapfile -t geode_files < <(find "$build_output" -type f -name '*.geode' | sort)
+
+            if [ "${#geode_files[@]}" -eq 0 ]; then
+              echo "No .geode file found in $build_output" >&2
+              exit 1
+            fi
+
+            if [ "${#geode_files[@]}" -gt 1 ]; then
+              printf 'Expected exactly one .geode file in %s, found:\n' "$build_output" >&2
+              printf ' - %s\n' "${geode_files[@]}" >&2
+              exit 1
+            fi
+
+            asset_path="${geode_files[0]}"
+          fi
+
+          echo "path=$asset_path" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$asset_path")" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v4
         with:
           name: Build Output
-          path: ${{ steps.build.outputs.build-output }}
-
-      - name: Read release version
-        if: github.ref == 'refs/heads/main'
-        id: version
-        shell: bash
-        run: |
-          version="$(python3 - <<'PY'
-          import json
-          with open('mod.json', 'r', encoding='utf-8') as mod_file:
-              print(json.load(mod_file)['version'])
-          PY
-          )"
-
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          path: ${{ steps.asset.outputs.path }}
 
       - name: Resolve merged PR metadata
         if: github.ref == 'refs/heads/main'
@@ -99,24 +112,36 @@ jobs:
               prs.find((pr) => pr.merged_at) ??
               null;
 
-            const releaseTitle =
+            if (!mergedPr) {
+              core.warning(`No merged pull request associated with ${context.sha}; skipping release creation.`);
+              core.setOutput('notes', context.payload.head_commit?.message?.split('\n')[0] ?? '');
+              core.setOutput('title', '');
+              core.setOutput('tag', '');
+              core.setOutput('number', '');
+              return;
+            }
+
+            const releaseVersion = mergedPr.head.ref.split('/').pop();
+            const releaseNotes =
               mergedPr?.title ??
               context.payload.head_commit?.message?.split('\n')[0] ??
               `Release ${context.sha.slice(0, 7)}`;
 
-            core.setOutput('title', releaseTitle);
-            core.setOutput('number', mergedPr ? String(mergedPr.number) : '');
+            core.setOutput('title', releaseVersion);
+            core.setOutput('tag', releaseVersion);
+            core.setOutput('notes', releaseNotes);
+            core.setOutput('number', String(mergedPr.number));
 
       - name: Create GitHub release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && steps.pr.outputs.tag != ''
         uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
           artifactErrorsFailBuild: true
-          artifacts: ${{ steps.build.outputs.build-output }}
-          body: ${{ steps.pr.outputs.title }}
+          artifacts: ${{ steps.asset.outputs.path }}
+          body: ${{ steps.pr.outputs.notes }}
           commit: ${{ github.sha }}
           makeLatest: true
           name: ${{ steps.pr.outputs.title }}
           replacesArtifacts: true
-          tag: ${{ steps.version.outputs.tag }}
+          tag: ${{ steps.pr.outputs.tag }}
