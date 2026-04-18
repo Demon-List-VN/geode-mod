@@ -6,6 +6,10 @@ on:
     branches:
       - '**'
 
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
   build:
     strategy:
@@ -49,6 +53,8 @@ jobs:
     needs: ['build']
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
 
@@ -56,3 +62,61 @@ jobs:
         with:
           name: Build Output
           path: ${{ steps.build.outputs.build-output }}
+
+      - name: Read release version
+        if: github.ref == 'refs/heads/main'
+        id: version
+        shell: bash
+        run: |
+          version="$(python3 - <<'PY'
+          import json
+          with open('mod.json', 'r', encoding='utf-8') as mod_file:
+              print(json.load(mod_file)['version'])
+          PY
+          )"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve merged PR metadata
+        if: github.ref == 'refs/heads/main'
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const prs = await github.paginate(
+              github.rest.repos.listPullRequestsAssociatedWithCommit,
+              {
+                owner,
+                repo,
+                commit_sha: context.sha,
+              },
+            );
+
+            const mergedPr =
+              prs.find((pr) => pr.merged_at && pr.base.ref === 'main') ??
+              prs.find((pr) => pr.merged_at) ??
+              null;
+
+            const releaseTitle =
+              mergedPr?.title ??
+              context.payload.head_commit?.message?.split('\n')[0] ??
+              `Release ${context.sha.slice(0, 7)}`;
+
+            core.setOutput('title', releaseTitle);
+            core.setOutput('number', mergedPr ? String(mergedPr.number) : '');
+
+      - name: Create GitHub release
+        if: github.ref == 'refs/heads/main'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: ${{ steps.build.outputs.build-output }}
+          body: ${{ steps.pr.outputs.title }}
+          commit: ${{ github.sha }}
+          makeLatest: true
+          name: ${{ steps.pr.outputs.title }}
+          replacesArtifacts: true
+          tag: ${{ steps.version.outputs.tag }}
