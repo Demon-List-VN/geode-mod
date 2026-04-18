@@ -1,12 +1,12 @@
 {
-  "geode": "5.0.0",
+  "geode": "5.6.1",
   "gd": {
     "win": "*",
     "android": "*",
     "mac": "*",
     "ios": "*"
   },
-  "version": "5.0.1",
+  "version": "5.0.2",
   "id": "nampe.gdvn",
   "name": "Geometry Dash VN",
   "developer": "NamPE",
