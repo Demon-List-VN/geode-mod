@@ -45,12 +45,10 @@ void AuthService::requestOTP() {
 			auto json = res.json().unwrap();
 			auto code = json["code"].asString().unwrap();
 
-			web::openLinkInBrowser("https://www.gdvn.net/auth/otp/" + code);
-
 		    geode::Loader::get()->queueInMainThread([code] {
 		        geode::createQuickPopup(
                     "GDVN Login",
-                    "A browser window has been opened.\n<cy>Grant access</c> on the website, then click <cg>Continue</c>.\n Your OTP code is: <cr>" + code + "</c>",
+                    "Open GDVN website and go to <cy>Settings > Auth > Grant OTP</c>.\nEnter this OTP code, then click <cg>Continue</c>.\nYour OTP code is: <cr>" + code + "</c>",
                     "Cancel",
                     "Continue",
                     [code](auto, bool btn2) {
