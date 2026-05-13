@@ -71,9 +71,15 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Fetch version branch
+        id: version_ref
         shell: bash
         run: |
-          git fetch origin "${{ steps.mod.outputs.version }}:${{ steps.mod.outputs.version }}"
+          if git fetch origin "${{ steps.mod.outputs.version }}:${{ steps.mod.outputs.version }}"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version branch '${{ steps.mod.outputs.version }}' was not found on origin; skipping release generation." >&2
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
@@ -112,7 +118,7 @@ jobs:
           path: ${{ steps.asset.outputs.path }}
 
       - name: Resolve release notes from PR commits
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.version_ref.outputs.found == 'true'
         id: notes
         uses: actions/github-script@v7
         env:
