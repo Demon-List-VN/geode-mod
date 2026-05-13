@@ -13,6 +13,7 @@ using namespace geode::prelude;
 class $modify(DTPlayLayer, PlayLayer) {
 	struct Fields {
 		bool hasRespawned = false;
+		bool isCheatedRun = false;
 		AttemptCounter attemptCounter;
 		DeathCounter deathCounter;
 		EventSubmitter *eventSubmitter;
@@ -32,8 +33,17 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->eventSubmitter = new EventSubmitter(id);
 		m_fields->raidSubmitter = new RaidSubmitter(id);
 		m_fields->pvpSubmitter = new PvpSubmitter(id);
+		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
 
 		return true;
+	}
+
+	void postUpdate(float dt) {
+		PlayLayer::postUpdate(dt);
+
+		if (!m_fields->isCheatedRun && !m_level->isPlatformer() && !m_isPracticeMode && CheatGuard::isGameplayCheated()) {
+			m_fields->isCheatedRun = true;
+		}
 	}
 
 	void destroyPlayer(PlayerObject * player, GameObject * p1) {
@@ -44,7 +54,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		}
 
 		if (!m_level->isPlatformer() && !m_isPracticeMode) {
-			bool isCheated = CheatGuard::isGameplayCheated();
+			bool isCheated = m_fields->isCheatedRun || CheatGuard::isGameplayCheated();
 			log::info("Run ended on level {} at {}%: {}", m_level->m_levelID.value(), this->getCurrentPercentInt(), isCheated ? "cheated" : "not cheated");
 
 			if (isCheated) {
@@ -63,7 +73,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PlayLayer::levelComplete();
 
 		if (!m_isPracticeMode) {
-			bool isCheated = CheatGuard::isGameplayCheated();
+			bool isCheated = m_fields->isCheatedRun || CheatGuard::isGameplayCheated();
 			log::info("Run completed on level {}: {}", m_level->m_levelID.value(), isCheated ? "cheated" : "not cheated");
 
 			if (isCheated) {
@@ -81,12 +91,13 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PlayLayer::resetLevel();
 
 		m_fields->hasRespawned = true;
+		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
 	}
 
 	void onQuit() {
 		PlayLayer::onQuit();
 
-		if (CheatGuard::isGameplayCheated()) {
+		if (m_fields->isCheatedRun || CheatGuard::isGameplayCheated()) {
 			log::info("Skipping gameplay API submissions because the run is cheated");
 		} else {
 			m_fields->attemptCounter.submit();
