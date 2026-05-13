@@ -141,12 +141,25 @@ void AuthService::check() {
     }
 
     req.header("Authorization", "Bearer " + getToken());
+    req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
     m_get_holder.spawn(req.get(url), [loadingToast](web::WebResponse res) {
         try {
             loadingToast->hide();
 
             if (!res.ok()) {
+                if (res.code() == 426) {
+                    auto errorToast = geode::Notification::create(
+                        "Please update GDVN mod",
+                        geode::NotificationIcon::Error,
+                        2.0f
+                    );
+
+                    errorToast->show();
+
+                    return;
+                }
+
                 auto errorToast = geode::Notification::create(
                     "Token expired. Please log back in",
                     geode::NotificationIcon::Error,
