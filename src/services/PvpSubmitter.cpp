@@ -7,14 +7,11 @@
 
 async::TaskHolder<web::WebResponse> PvpSubmitter::m_get_holder, PvpSubmitter::m_put_holder;
 
-PvpSubmitter::PvpSubmitter() {}
+PvpSubmitter::PvpSubmitter() : m_state(std::make_shared<State>()) {}
 
-PvpSubmitter::~PvpSubmitter() {
-	m_get_holder.cancel();
-	m_put_holder.cancel();
-}
+PvpSubmitter::~PvpSubmitter() = default;
 
-PvpSubmitter::PvpSubmitter(int levelID): levelID(levelID) {
+PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	if (!AuthService::isLoggedIn()) {
 		return;
 	}
@@ -24,7 +21,8 @@ PvpSubmitter::PvpSubmitter(int levelID): levelID(levelID) {
 	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
-	m_get_holder.spawn(req.get(url), [this](web::WebResponse res) {
+	std::weak_ptr<State> state = m_state;
+	m_get_holder.spawn(req.get(url), [state](web::WebResponse res) {
 		try {
 			if (!res.ok()) {
 				return;
@@ -33,22 +31,28 @@ PvpSubmitter::PvpSubmitter(int levelID): levelID(levelID) {
 			auto json = res.json().unwrap();
 
 			if (json["matchId"].isNumber()) {
-				matchID = static_cast<int>(json["matchId"].asDouble().unwrap());
-				inPvp.store(matchID > 0);
+				if (auto locked = state.lock()) {
+					locked->matchID = static_cast<int>(json["matchId"].asDouble().unwrap());
+					locked->inPvp.store(locked->matchID > 0);
+				}
 			}
 		} catch (...) {
-			log::warn("Failed to check active PvP match for level {}", this->levelID);
+			if (auto locked = state.lock()) {
+				log::warn("Failed to check active PvP match for level {}", locked->levelID);
+			} else {
+				log::warn("Failed to check active PvP match");
+			}
 		}
 	});
 }
 
 void PvpSubmitter::submit() {
-	if (!inPvp.load() || matchID <= 0) {
+	if (!m_state || !m_state->inPvp.load() || m_state->matchID <= 0) {
 		return;
 	}
 
 	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress?progress=" + std::to_string(best);
+	std::string url = API_URL + "/pvp/matches/" + std::to_string(m_state->matchID) + "/progress?progress=" + std::to_string(m_state->best);
 	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
@@ -56,10 +60,10 @@ void PvpSubmitter::submit() {
 }
 
 void PvpSubmitter::record(float progress) {
-	if (progress <= best) {
+	if (!m_state || progress <= m_state->best) {
 		return;
 	}
 
-	best = progress;
+	m_state->best = progress;
 	submit();
 }

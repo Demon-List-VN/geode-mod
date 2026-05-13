@@ -281,14 +281,27 @@ class $modify(LevelInfoLayer) {
 			    req.header("Authorization", "Bearer " + AuthService::getToken());
 		    }
 
-		    m_fields->m_holder.spawn(req.get(API_URL + "/lists/levels/" + std::to_string(id) + "/starred"), [this, level, loadingLabel, id, isLoggedIn](web::WebResponse res) mutable {
+			auto layer = this;
+			layer->retain();
+
+		    m_fields->m_holder.spawn(req.get(API_URL + "/lists/levels/" + std::to_string(id) + "/starred"), [layer, level, loadingLabel, id, isLoggedIn](web::WebResponse res) mutable {
+				auto cleanup = [&]() {
+					if (loadingLabel) {
+						loadingLabel->removeFromParent();
+						loadingLabel = nullptr;
+					}
+
+					layer->release();
+				};
+
 			    try {
-                    if (loadingLabel) {
-                        loadingLabel->removeFromParent();
-                        loadingLabel = nullptr;
-                    }
+					if (loadingLabel) {
+						loadingLabel->removeFromParent();
+						loadingLabel = nullptr;
+					}
 
 				    if (!res.ok()) {
+						cleanup();
 					    return;
 				    }
 
@@ -296,15 +309,14 @@ class $modify(LevelInfoLayer) {
 			        std::vector<std::string> labels = getListInfoLabels(resJson, isLoggedIn);
 
 			        if (!labels.empty()) {
-					    auto btn = ButtonCreator().create(labels, level, this);
+					    auto btn = ButtonCreator().create(labels, level, layer);
 
-					    this->addChild(btn);
+					    layer->addChild(btn);
                     }
+
+					cleanup();
 			    } catch(...) {
-                    if (loadingLabel) {
-                        loadingLabel->removeFromParent();
-                        loadingLabel = nullptr;
-                    }
+					cleanup();
                     log::warn("Failed to load GDVN level info for level {}", id);
 			    }
 		    });
