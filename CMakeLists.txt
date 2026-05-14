@@ -18,8 +18,12 @@ if (APPLE)
 endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
-	src/*.cpp src/*.hpp src/*.h src/*.mm
+	src/*.cpp src/*.hpp src/*.h
 )
+
+if (APPLE)
+    list(APPEND SOURCES src/services/PvpRealtimeSocket.mm)
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES}
         src/services/CheatGuard.cpp)
