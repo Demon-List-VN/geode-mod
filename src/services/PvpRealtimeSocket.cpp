@@ -1,16 +1,23 @@
 #include "PvpRealtimeSocket.hpp"
 
-#include <Geode/Geode.hpp>
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXSocketTLSOptions.h>
 #include <ixwebsocket/IXWebSocket.h>
 #include <ixwebsocket/IXWebSocketMessage.h>
 #include <ixwebsocket/IXWebSocketMessageType.h>
 
+#include <Geode/loader/Loader.hpp>
+
 #include <atomic>
 #include <mutex>
-
-using namespace geode::prelude;
 
 namespace {
 void ensureIxNetSystem() {
@@ -135,7 +142,7 @@ private:
 		m_open.store(true);
 		auto weakSelf = this->weak_from_this();
 
-		Loader::get()->queueInMainThread([weakSelf] {
+		geode::Loader::get()->queueInMainThread([weakSelf] {
 			if (auto self = weakSelf.lock()) {
 				std::lock_guard lock(self->m_delegateMutex);
 				if (self->m_delegate && !self->m_closed.load()) {
@@ -152,7 +159,7 @@ private:
 
 		auto weakSelf = this->weak_from_this();
 
-		Loader::get()->queueInMainThread([weakSelf, message] {
+		geode::Loader::get()->queueInMainThread([weakSelf, message] {
 			if (auto self = weakSelf.lock()) {
 				std::lock_guard lock(self->m_delegateMutex);
 				if (self->m_delegate && !self->m_closed.load()) {
@@ -170,7 +177,7 @@ private:
 		m_open.store(false);
 		auto weakSelf = this->weak_from_this();
 
-		Loader::get()->queueInMainThread([weakSelf] {
+		geode::Loader::get()->queueInMainThread([weakSelf] {
 			if (auto self = weakSelf.lock()) {
 				std::lock_guard lock(self->m_delegateMutex);
 				if (auto* delegate = self->m_delegate) {

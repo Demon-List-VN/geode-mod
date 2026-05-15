@@ -21,6 +21,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 add_library(${PROJECT_NAME} SHARED ${SOURCES}
         src/services/CheatGuard.cpp)
 
+if (WIN32)
+    set_source_files_properties(src/services/PvpRealtimeSocket.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
+
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         $<$<CONFIG:Release>:BUILD_RELEASE>
         $<$<CONFIG:RelWithDebInfo>:BUILD_RELWITHDEBINFO>
