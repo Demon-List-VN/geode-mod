@@ -73,7 +73,7 @@ endif()
 CPMAddPackage(
     NAME ixwebsocket
     GITHUB_REPOSITORY machinezone/IXWebSocket
-    GIT_TAG v11.4.6
+    GIT_TAG v11.4.5
     OPTIONS
         "USE_TLS ON"
         "USE_ZLIB OFF"
