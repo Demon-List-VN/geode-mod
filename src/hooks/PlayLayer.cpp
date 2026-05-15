@@ -6,7 +6,9 @@
 #include "../services/EventSubmitter.hpp"
 #include "../services/RaidSubmitter.hpp"
 #include "../services/PvpSubmitter.hpp"
+#include "../services/PvpOverlay.hpp"
 #include "../services/CheatGuard.hpp"
+#include "../services/AuthService.hpp"
 
 using namespace geode::prelude;
 
@@ -19,6 +21,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		EventSubmitter *eventSubmitter;
 		RaidSubmitter *raidSubmitter;
 		PvpSubmitter *pvpSubmitter;
+		PvpOverlay *pvpOverlay = nullptr;
 	};
 
 	bool init(GJGameLevel * level, bool p1, bool p2) {
@@ -35,6 +38,10 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->pvpSubmitter = new PvpSubmitter(id);
 		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
 
+		if (Mod::get()->getSettingValue<bool>("show-pvp-overlay") && AuthService::isLoggedIn() && !m_level->isPlatformer() && !m_isPracticeMode) {
+			m_fields->pvpOverlay = new PvpOverlay(this, id);
+		}
+
 		return true;
 	}
 
@@ -43,6 +50,10 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 		if (!m_fields->isCheatedRun && !m_level->isPlatformer() && !m_isPracticeMode && CheatGuard::isGameplayCheated()) {
 			m_fields->isCheatedRun = true;
+		}
+
+		if (m_fields->pvpOverlay) {
+			m_fields->pvpOverlay->update(dt);
 		}
 	}
 
@@ -95,6 +106,9 @@ class $modify(DTPlayLayer, PlayLayer) {
 	}
 
 	void onQuit() {
+		delete m_fields->pvpOverlay;
+		m_fields->pvpOverlay = nullptr;
+
 		PlayLayer::onQuit();
 
 		if (m_fields->isCheatedRun || CheatGuard::isGameplayCheated()) {

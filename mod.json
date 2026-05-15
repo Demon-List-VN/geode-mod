@@ -6,7 +6,7 @@
     "mac": "2.2081",
     "ios": "2.2081"
   },
-  "version": "5.0.4",
+  "version": "5.0.5",
   "id": "nampe.gdvn",
   "name": "GDVN",
   "developer": "NamPE",
@@ -32,6 +32,12 @@
       "type": "bool",
       "name": "Show level info",
       "description": "Show level's list info",
+      "default": true
+    },
+    "show-pvp-overlay": {
+      "type": "bool",
+      "name": "Show PvP overlay",
+      "description": "Show realtime PvP progress while playing an active match",
       "default": true
     }
   }
