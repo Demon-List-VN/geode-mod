@@ -55,7 +55,7 @@ else()
     CPMAddPackage(
         NAME mbedtls
         GITHUB_REPOSITORY Mbed-TLS/mbedtls
-        GIT_TAG v3.6.2
+        GIT_TAG v2.28.9
         OPTIONS
             "ENABLE_PROGRAMS OFF"
             "ENABLE_TESTING OFF"
