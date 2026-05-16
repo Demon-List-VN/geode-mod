@@ -38,7 +38,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->pvpSubmitter = new PvpSubmitter(id);
 		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
 
-		if (Mod::get()->getSettingValue<bool>("show-pvp-overlay") && AuthService::isLoggedIn() && !m_level->isPlatformer() && !m_isPracticeMode) {
+		if (AuthService::isLoggedIn() && !m_level->isPlatformer() && !m_isPracticeMode) {
 			m_fields->pvpOverlay = new PvpOverlay(this, id);
 		}
 
@@ -72,11 +72,13 @@ class $modify(DTPlayLayer, PlayLayer) {
 				return;
 			}
 
+		    const float progress = std::min(this->getCurrentPercent(), 99.99f);
+
 			m_fields->attemptCounter.add();
-			m_fields->deathCounter.add(this->getCurrentPercentInt());
-			m_fields->eventSubmitter->record(this->getCurrentPercent());
-			m_fields->raidSubmitter->record(this->getCurrentPercent());
-			m_fields->pvpSubmitter->record(this->getCurrentPercent());
+			m_fields->deathCounter.add(progress);
+			m_fields->eventSubmitter->record(progress);
+			m_fields->raidSubmitter->record(progress);
+			m_fields->pvpSubmitter->record(progress);
 		}
 	}
 

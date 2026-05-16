@@ -17,14 +17,14 @@
 #include <Geode/loader/Loader.hpp>
 
 #include <atomic>
-#include <mutex>
 
 namespace {
 void ensureIxNetSystem() {
-	static std::once_flag once;
-	std::call_once(once, [] {
+	static std::atomic_bool initialized = false;
+	bool expected = false;
+	if (initialized.compare_exchange_strong(expected, true)) {
 		ix::initNetSystem();
-	});
+	}
 }
 
 ix::SocketTLSOptions tlsOptions() {
@@ -111,11 +111,7 @@ public:
 		}
 
 		m_open.store(false);
-
-		{
-			std::lock_guard lock(m_delegateMutex);
-			m_delegate = nullptr;
-		}
+		m_delegate.store(nullptr);
 
 		if (m_socket) {
 			m_socket->stop();
@@ -128,9 +124,8 @@ public:
 	}
 
 private:
-	PvpRealtimeSocketDelegate* m_delegate = nullptr;
+	std::atomic<PvpRealtimeSocketDelegate*> m_delegate = nullptr;
 	std::unique_ptr<ix::WebSocket> m_socket;
-	mutable std::mutex m_delegateMutex;
 	std::atomic_bool m_open = false;
 	std::atomic_bool m_closed = false;
 
@@ -144,9 +139,8 @@ private:
 
 		geode::Loader::get()->queueInMainThread([weakSelf] {
 			if (auto self = weakSelf.lock()) {
-				std::lock_guard lock(self->m_delegateMutex);
-				if (self->m_delegate && !self->m_closed.load()) {
-					self->m_delegate->onRealtimeOpen();
+				if (auto* delegate = self->m_delegate.load(); delegate && !self->m_closed.load()) {
+					delegate->onRealtimeOpen();
 				}
 			}
 		});
@@ -161,9 +155,8 @@ private:
 
 		geode::Loader::get()->queueInMainThread([weakSelf, message] {
 			if (auto self = weakSelf.lock()) {
-				std::lock_guard lock(self->m_delegateMutex);
-				if (self->m_delegate && !self->m_closed.load()) {
-					self->m_delegate->onRealtimeMessage(message);
+				if (auto* delegate = self->m_delegate.load(); delegate && !self->m_closed.load()) {
+					delegate->onRealtimeMessage(message);
 				}
 			}
 		});
@@ -179,9 +172,7 @@ private:
 
 		geode::Loader::get()->queueInMainThread([weakSelf] {
 			if (auto self = weakSelf.lock()) {
-				std::lock_guard lock(self->m_delegateMutex);
-				if (auto* delegate = self->m_delegate) {
-					self->m_delegate = nullptr;
+				if (auto* delegate = self->m_delegate.exchange(nullptr)) {
 					delegate->onRealtimeClose();
 				}
 			}
