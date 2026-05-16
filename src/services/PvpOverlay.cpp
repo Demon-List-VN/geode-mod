@@ -22,7 +22,10 @@ constexpr float CHAT_MESSAGE_LIFETIME = 8.0f;
 constexpr float CHAT_FADE_TIME = 1.5f;
 constexpr float CHAT_GRACE_SECONDS = 3.0f * 60.0f;
 constexpr float MESSAGE_REFRESH_COALESCE = 0.2f;
+constexpr float CHAT_HISTORY_WIDTH = 320.0f;
+constexpr float CHAT_HISTORY_LINE_HEIGHT = 15.0f;
 constexpr int MAX_RECENT_MESSAGES = 4;
+constexpr int CHAT_HISTORY_VISIBLE_LINES = 8;
 constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
 constexpr int MESSAGE_FETCH_LIMIT = 100;
 
@@ -70,6 +73,21 @@ std::string toLabelSafeText(std::string text) {
 		if (c == '\n' || c == '\r' || c == '\t') {
 			safe.push_back(' ');
 		} else if (c >= 32 && c < 127) {
+			safe.push_back(static_cast<char>(c));
+		}
+	}
+
+	return safe;
+}
+
+std::string toTTFSafeText(std::string text) {
+	std::string safe;
+	safe.reserve(text.size());
+
+	for (unsigned char c : text) {
+		if (c == '\n' || c == '\r' || c == '\t') {
+			safe.push_back(' ');
+		} else if (c >= 32 || c >= 128) {
 			safe.push_back(static_cast<char>(c));
 		}
 	}
@@ -139,6 +157,10 @@ matjson::Value const& realtimeRecord(matjson::Value const& payload) {
 		return data["record"];
 	}
 
+	if (payload["record"].isObject()) {
+		return payload["record"];
+	}
+
 	if (payload["new"].isObject()) {
 		return payload["new"];
 	}
@@ -179,8 +201,64 @@ public:
 		}
 	}
 
-	void closeAfterSend() {
-		this->onClose(nullptr);
+	void updateHistory() {
+		if (!m_overlay) {
+			return;
+		}
+
+		auto lines = m_overlay->getChatHistoryLines();
+		if (lines.empty()) {
+			lines.push_back("No messages yet.");
+		}
+
+		auto maxOffset = lines.size() > CHAT_HISTORY_VISIBLE_LINES
+			? lines.size() - CHAT_HISTORY_VISIBLE_LINES
+			: 0;
+		m_historyOffset = std::min(m_historyOffset, maxOffset);
+		auto start = maxOffset - m_historyOffset;
+		auto end = std::min(lines.size(), start + CHAT_HISTORY_VISIBLE_LINES);
+
+		for (auto* label : m_historyLabels) {
+			if (label) {
+				label->removeFromParentAndCleanup(true);
+			}
+		}
+		m_historyLabels.clear();
+
+		for (size_t i = start; i < end; ++i) {
+			auto label = CCLabelBMFont::create(lines[i].c_str(), "chatFont.fnt");
+			label->setAnchorPoint({ 0.0f, 1.0f });
+			label->setScale(0.52f);
+			label->setOpacity(220);
+			label->setColor(ccc3(235, 235, 235));
+			label->limitLabelWidth(CHAT_HISTORY_WIDTH, 0.52f, 0.28f);
+			m_mainLayer->addChildAtPosition(
+				label,
+				Anchor::TopLeft,
+				{ 24.0f, -38.0f - CHAT_HISTORY_LINE_HEIGHT * static_cast<float>(i - start) }
+			);
+			m_historyLabels.push_back(label);
+		}
+
+		if (m_upButton) {
+			m_upButton->setEnabled(m_historyOffset < maxOffset);
+		}
+		if (m_downButton) {
+			m_downButton->setEnabled(m_historyOffset > 0);
+		}
+	}
+
+	void didSend() {
+		m_sending = false;
+		this->setSending(false);
+		this->setStatus("");
+
+		if (m_input) {
+			m_input->setString("", false);
+			m_input->focus();
+		}
+
+		this->updateHistory();
 	}
 
 	void closeFromOverlay() {
@@ -188,38 +266,70 @@ public:
 		this->onClose(nullptr);
 	}
 
+	void scrollHistory(int delta) {
+		auto lineCount = m_overlay ? m_overlay->getChatHistoryLines().size() : 0;
+		auto maxOffset = lineCount > CHAT_HISTORY_VISIBLE_LINES ? lineCount - CHAT_HISTORY_VISIBLE_LINES : 0;
+		auto next = static_cast<int>(m_historyOffset) + delta;
+		m_historyOffset = static_cast<size_t>(std::clamp(next, 0, static_cast<int>(maxOffset)));
+		this->updateHistory();
+	}
+
 protected:
 	bool init(PvpOverlay* overlay) {
-		if (!Popup::init(360.0f, 120.0f)) {
+		if (!Popup::init(380.0f, 220.0f)) {
 			return false;
 		}
 
 		m_overlay = overlay;
 		this->setTitle("PvP Chat");
 
-		m_input = TextInput::create(250.0f, "Type a message...");
+		auto upSprite = ButtonSprite::create("Up", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+		upSprite->setScale(0.4f);
+		m_upButton = CCMenuItemExt::createSpriteExtra(upSprite, [this](auto*) {
+			this->scrollHistory(1);
+		});
+		m_buttonMenu->addChildAtPosition(m_upButton, Anchor::TopRight, { -28.0f, -48.0f });
+
+		auto downSprite = ButtonSprite::create("Down", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+		downSprite->setScale(0.4f);
+		m_downButton = CCMenuItemExt::createSpriteExtra(downSprite, [this](auto*) {
+			this->scrollHistory(-1);
+		});
+		m_buttonMenu->addChildAtPosition(m_downButton, Anchor::TopRight, { -28.0f, -86.0f });
+
+		m_input = TextInput::create(250.0f, "Type a message...", "chatFont.fnt");
 		m_input->setCommonFilter(CommonFilter::Any);
 		m_input->setMaxCharCount(MAX_CHAT_MESSAGE_LENGTH);
 		m_input->setTextAlign(TextInputAlign::Left);
 		m_input->setDelegate(this);
-		m_mainLayer->addChildAtPosition(m_input, Anchor::Center, { -38.0f, 5.0f });
+		m_mainLayer->addChildAtPosition(m_input, Anchor::Bottom, { -38.0f, 38.0f });
 
 		auto sendSprite = ButtonSprite::create("Send", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		sendSprite->setScale(0.55f);
 		m_sendButton = CCMenuItemExt::createSpriteExtra(sendSprite, [this](auto*) {
 			this->submit();
 		});
-		m_buttonMenu->addChildAtPosition(m_sendButton, Anchor::Center, { 128.0f, 5.0f });
+		m_buttonMenu->addChildAtPosition(m_sendButton, Anchor::Bottom, { 128.0f, 38.0f });
 
 		m_statusLabel = CCLabelBMFont::create("", "bigFont.fnt");
 		m_statusLabel->setScale(0.32f);
 		m_statusLabel->setOpacity(180);
-		m_mainLayer->addChildAtPosition(m_statusLabel, Anchor::Bottom, { 0.0f, 18.0f });
+		m_mainLayer->addChildAtPosition(m_statusLabel, Anchor::Bottom, { 0.0f, 16.0f });
+
+		this->updateHistory();
 
 		return true;
 	}
 
 	void onClose(CCObject* sender) override {
+		for (auto*& label : m_historyLabels) {
+			if (label) {
+				label->removeFromParentAndCleanup(true);
+				label = nullptr;
+			}
+		}
+		m_historyLabels.clear();
+
 		if (m_overlay) {
 			auto overlay = m_overlay;
 			m_overlay = nullptr;
@@ -251,8 +361,12 @@ protected:
 private:
 	PvpOverlay* m_overlay = nullptr;
 	TextInput* m_input = nullptr;
+	std::vector<CCLabelBMFont*> m_historyLabels;
 	CCLabelBMFont* m_statusLabel = nullptr;
 	CCMenuItemSpriteExtra* m_sendButton = nullptr;
+	CCMenuItemSpriteExtra* m_upButton = nullptr;
+	CCMenuItemSpriteExtra* m_downButton = nullptr;
+	size_t m_historyOffset = 0;
 	bool m_sending = false;
 
 	void submit() {
@@ -297,7 +411,7 @@ bool PvpOverlay::hasPvpMatch() const {
 }
 
 bool PvpOverlay::isChatUsable() const {
-	return m_matchID > 0 && m_chatOpen && !m_chatMuted && !m_cleanedUp;
+	return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
 
 bool PvpOverlay::openChat() {
@@ -306,6 +420,8 @@ bool PvpOverlay::openChat() {
 	}
 
 	if (m_chatPopup) {
+		this->requestMessages(false, false);
+		m_chatPopup->updateHistory();
 		m_chatPopup->focusInput();
 		return true;
 	}
@@ -316,6 +432,8 @@ bool PvpOverlay::openChat() {
 	}
 
 	m_chatPopup->show();
+	this->requestMessages(false, false);
+	m_chatPopup->updateHistory();
 	m_chatPopup->focusInput();
 	return true;
 }
@@ -335,11 +453,6 @@ void PvpOverlay::setChatMuted(bool muted) {
 			}
 		}
 		m_recentMessages.clear();
-
-		if (m_chatPopup) {
-			m_chatPopup->closeFromOverlay();
-			m_chatPopup = nullptr;
-		}
 	}
 
 	this->refreshChatVisibility();
@@ -378,21 +491,6 @@ void PvpOverlay::createChatNodes() {
 	m_chatStack->setID("gdvn-pvp-chat-stack"_spr);
 	m_chatStack->setVisible(false);
 	parent->addChild(m_chatStack, 1001);
-
-#ifdef GEODE_IS_MOBILE
-	m_mobileChatMenu = CCMenu::create();
-	m_mobileChatMenu->setID("gdvn-pvp-chat-menu"_spr);
-	m_mobileChatMenu->setPosition({ 0.0f, 0.0f });
-	m_mobileChatMenu->setVisible(false);
-
-	auto chatSprite = ButtonSprite::create("Chat", "goldFont.fnt", "GJ_button_01.png", 0.8f);
-	chatSprite->setScale(0.5f);
-	m_mobileChatButton = CCMenuItemExt::createSpriteExtra(chatSprite, [this](auto*) {
-		this->openChat();
-	});
-	m_mobileChatMenu->addChild(m_mobileChatButton);
-	parent->addChild(m_mobileChatMenu, 1002);
-#endif
 
 	this->updateChatPositions();
 	this->refreshChatVisibility();
@@ -613,7 +711,7 @@ void PvpOverlay::submitChatMessage(std::string content) {
 		}
 
 		if (m_chatPopup) {
-			m_chatPopup->closeAfterSend();
+			m_chatPopup->didSend();
 		}
 	});
 }
@@ -683,6 +781,12 @@ void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
 	if (event == "phx_reply") {
 		if (getString(json["payload"], "status") == "ok") {
 			m_joined = true;
+		} else {
+			log::warn("Failed to join PvP realtime channel");
+			if (!m_realtimeAccessToken.empty()) {
+				m_realtimeAccessToken.clear();
+				this->sendJoin();
+			}
 		}
 		return;
 	}
@@ -691,18 +795,33 @@ void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
 		auto const& payload = json["payload"];
 		auto const& data = payload["data"];
 		auto table = getString(data, "table");
+		if (table.empty()) {
+			table = getString(payload, "table");
+		}
 		auto const& row = realtimeRecord(payload);
+		if (table.empty() && row["matchId"].isNumber() && row["content"].isString()) {
+			table = "pvpMatchMessages";
+		}
 
-		if (table == "pvpMatchResults") {
-			this->handleResultRow(row);
-			this->refreshLabel();
-		} else if (table == "pvpMatches") {
-			this->handleMatchRow(row);
-		} else if (table == "pvpMatchMessages") {
-			this->scheduleMessageRefresh();
+			if (table == "pvpMatchResults") {
+				this->handleResultRow(row);
+				this->refreshLabel();
+				this->scheduleMessageRefresh();
+			} else if (table == "pvpMatches") {
+				this->handleMatchRow(row);
+				this->scheduleMessageRefresh();
+			} else if (table == "pvpMatchMessages") {
+				log::info(
+					"PvP realtime chat event received: match={}, id={}, content_empty={}",
+					getInteger(row, "matchId"),
+					getInteger(row, "id"),
+					getString(row, "content").empty()
+				);
+				this->handleMessageRow(row, true);
+				this->scheduleMessageRefresh();
+			}
 		}
 	}
-}
 
 void PvpOverlay::handleResultRow(matjson::Value const& row) {
 	auto uid = getString(row, "uid");
@@ -785,24 +904,91 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 		return;
 	}
 
-	auto previousLatest = m_latestMessageID;
-	if (message.id > m_latestMessageID) {
-		m_latestMessageID = message.id;
+	if (message.id > 0) {
+		auto existing = std::find_if(m_chatMessages.begin(), m_chatMessages.end(), [&](ChatMessage const& item) {
+			return item.id == message.id;
+		});
+
+		if (existing == m_chatMessages.end()) {
+			m_chatMessages.push_back(message);
+		} else {
+			*existing = message;
+		}
+	} else {
+		m_chatMessages.push_back(message);
 	}
 
-	if (animateNew && message.id > previousLatest && !m_chatMuted) {
-		this->pushRecentMessage(message);
+		auto previousLatest = m_latestMessageID;
+		if (message.id > m_latestMessageID) {
+			m_latestMessageID = message.id;
+		}
+
+		log::info(
+			"PvP chat message received: match={}, id={}, type={}, sender={}, new={}, toast={}",
+			m_matchID,
+			message.id,
+			message.type,
+			message.senderUid,
+			message.id > previousLatest,
+			animateNew && message.id > previousLatest
+		);
+
+		if (animateNew && message.id > previousLatest) {
+			this->pushRecentMessage(message);
+		}
+
+	if (m_chatPopup) {
+		m_chatPopup->updateHistory();
 	}
 }
 
+std::string PvpOverlay::getChatHistoryText() const {
+	auto lines = this->getChatHistoryLines();
+	std::string text;
+
+	for (auto const& line : lines) {
+		if (!text.empty()) {
+			text += "\n";
+		}
+		text += line;
+	}
+
+	return text;
+}
+
+std::vector<std::string> PvpOverlay::getChatHistoryLines() const {
+	std::vector<std::string> lines;
+	lines.reserve(m_chatMessages.size());
+
+	for (auto const& message : m_chatMessages) {
+		std::string sender;
+
+		if (message.type == "system") {
+			sender = "System";
+		} else if (!m_currentUid.empty() && message.senderUid == m_currentUid) {
+			sender = "You";
+		} else if (message.senderAnonymous) {
+			sender = "Anonymous";
+		} else if (!message.senderName.empty()) {
+			sender = message.senderName;
+		} else {
+			sender = "Opponent";
+		}
+
+		lines.push_back(truncateLabel(toTTFSafeText(sender + ": " + message.content), 120));
+	}
+
+	return lines;
+}
+
 void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
-	if (!m_chatStack || m_chatMuted) {
+	if (!m_chatStack) {
 		return;
 	}
 
 	std::string sender;
 	if (message.type == "system") {
-		sender = "Arena";
+		sender = "System";
 	} else if (!m_currentUid.empty() && message.senderUid == m_currentUid) {
 		sender = "You";
 	} else if (message.senderAnonymous) {
@@ -810,17 +996,17 @@ void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
 	} else if (!message.senderName.empty()) {
 		sender = message.senderName;
 	} else {
-		sender = "Rival";
+		sender = "Opponent";
 	}
 
-	auto text = truncateLabel(toLabelSafeText(sender + ": " + message.content), 110);
+	auto text = truncateLabel(toTTFSafeText(sender + ": " + message.content), 140);
 	if (text.empty()) {
 		return;
 	}
 
-	auto label = CCLabelBMFont::create(text.c_str(), "bigFont.fnt");
+	auto label = CCLabelBMFont::create(text.c_str(), "chatFont.fnt");
 	label->setAnchorPoint({ 0.0f, 0.0f });
-	label->setScale(0.28f);
+	label->setScale(0.55f);
 	label->setOpacity(220);
 
 	if (message.type == "system") {
@@ -829,7 +1015,7 @@ void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
 		label->setColor(ccc3(150, 255, 150));
 	}
 
-	label->limitLabelWidth(250.0f, 0.28f, 0.14f);
+	label->limitLabelWidth(280.0f, 0.55f, 0.3f);
 	m_chatStack->addChild(label);
 
 	m_recentMessages.push_back({ message.id, CHAT_MESSAGE_LIFETIME, label });
@@ -1053,13 +1239,6 @@ void PvpOverlay::cleanup() {
 		m_chatStack = nullptr;
 	}
 
-#ifdef GEODE_IS_MOBILE
-	if (m_mobileChatMenu) {
-		m_mobileChatMenu->removeFromParentAndCleanup(true);
-		m_mobileChatMenu = nullptr;
-		m_mobileChatButton = nullptr;
-	}
-#endif
 }
 
 void PvpOverlay::refreshLabel() {
@@ -1073,7 +1252,7 @@ void PvpOverlay::refreshLabel() {
 }
 
 void PvpOverlay::refreshChatVisibility() {
-	auto visible = m_chatOpen && !m_chatMuted && !m_cleanedUp;
+	auto visible = m_chatOpen && !m_cleanedUp;
 
 	if (!visible && m_chatPopup) {
 		m_chatPopup->closeFromOverlay();
@@ -1084,11 +1263,6 @@ void PvpOverlay::refreshChatVisibility() {
 		m_chatStack->setVisible(visible && !m_recentMessages.empty());
 	}
 
-#ifdef GEODE_IS_MOBILE
-	if (m_mobileChatMenu) {
-		m_mobileChatMenu->setVisible(visible);
-	}
-#endif
 }
 
 void PvpOverlay::updateLabelPosition() {
@@ -1102,17 +1276,8 @@ void PvpOverlay::updateLabelPosition() {
 }
 
 void PvpOverlay::updateChatPositions() {
-	float stackY = CHAT_MARGIN;
-
-#ifdef GEODE_IS_MOBILE
-	if (m_mobileChatButton) {
-		m_mobileChatButton->setPosition({ 34.0f, 22.0f });
-		stackY = 44.0f;
-	}
-#endif
-
 	if (m_chatStack) {
-		m_chatStack->setPosition({ CHAT_MARGIN, stackY });
+		m_chatStack->setPosition({ CHAT_MARGIN, CHAT_MARGIN });
 	}
 }
 
@@ -1128,15 +1293,4 @@ bool PvpOverlay::isActiveStatus(std::string const& status) const {
 
 bool PvpOverlay::isCompletedStatus(std::string const& status) const {
 	return status == "completed";
-}
-
-$execute {
-	listenForKeybindSettingPresses("open-pvp-chat", [](Keybind const&, bool down, bool repeat, double) {
-		if (!down || repeat) {
-			return false;
-		}
-
-		auto overlay = PvpOverlay::getActive();
-		return overlay ? overlay->openChat() : false;
-	});
 }

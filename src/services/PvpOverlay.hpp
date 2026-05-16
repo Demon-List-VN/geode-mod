@@ -30,6 +30,8 @@ public:
 	void setChatMuted(bool muted);
 	void submitChatMessage(std::string content);
 	void notifyChatPopupClosed(PvpChatPopup* popup);
+	std::string getChatHistoryText() const;
+	std::vector<std::string> getChatHistoryLines() const;
 
 	void onRealtimeOpen() override;
 	void onRealtimeMessage(std::string const& message) override;
@@ -66,11 +68,6 @@ private:
 	async::TaskHolder<web::WebResponse> m_messagesHolder;
 	async::TaskHolder<web::WebResponse> m_sendMessageHolder;
 
-#ifdef GEODE_IS_MOBILE
-	CCMenu* m_mobileChatMenu = nullptr;
-	CCMenuItemSpriteExtra* m_mobileChatButton = nullptr;
-#endif
-
 	int m_levelID = 0;
 	int m_matchID = 0;
 	int m_ref = 1;
@@ -97,6 +94,7 @@ private:
 	std::string m_topic;
 	PlayerProgress m_self;
 	PlayerProgress m_opponent;
+	std::vector<ChatMessage> m_chatMessages;
 	std::vector<RecentChatMessage> m_recentMessages;
 
 	void createLabel();
