@@ -961,44 +961,31 @@ std::vector<std::string> PvpOverlay::getChatHistoryLines() const {
 	lines.reserve(m_chatMessages.size());
 
 	for (auto const& message : m_chatMessages) {
-		std::string sender;
-
-		if (message.type == "system") {
-			sender = "System";
-		} else if (!m_currentUid.empty() && message.senderUid == m_currentUid) {
-			sender = "You";
-		} else if (message.senderAnonymous) {
-			sender = "Anonymous";
-		} else if (!message.senderName.empty()) {
-			sender = message.senderName;
-		} else {
-			sender = "Opponent";
-		}
-
+		auto sender = this->getChatSenderLabel(message);
 		lines.push_back(truncateLabel(toTTFSafeText(sender + ": " + message.content), 120));
 	}
 
 	return lines;
 }
 
+std::string PvpOverlay::getChatSenderLabel(ChatMessage const& message) const {
+	if (message.type == "system") {
+		return "System";
+	}
+
+	if (!m_currentUid.empty() && message.senderUid == m_currentUid) {
+		return "You";
+	}
+
+	return "Opponent";
+}
+
 void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
-	if (!m_chatStack) {
+	if (!m_chatStack || m_chatMuted) {
 		return;
 	}
 
-	std::string sender;
-	if (message.type == "system") {
-		sender = "System";
-	} else if (!m_currentUid.empty() && message.senderUid == m_currentUid) {
-		sender = "You";
-	} else if (message.senderAnonymous) {
-		sender = "Anonymous";
-	} else if (!message.senderName.empty()) {
-		sender = message.senderName;
-	} else {
-		sender = "Opponent";
-	}
-
+	auto sender = this->getChatSenderLabel(message);
 	auto text = truncateLabel(toTTFSafeText(sender + ": " + message.content), 140);
 	if (text.empty()) {
 		return;
@@ -1260,7 +1247,7 @@ void PvpOverlay::refreshChatVisibility() {
 	}
 
 	if (m_chatStack) {
-		m_chatStack->setVisible(visible && !m_recentMessages.empty());
+		m_chatStack->setVisible(visible && !m_chatMuted && !m_recentMessages.empty());
 	}
 
 }

@@ -115,6 +115,7 @@ private:
 	void handleMessagesPayload(matjson::Value const& json, bool animateNew);
 	void handleMessageRow(matjson::Value const& row, bool animateNew);
 	void parseMatchSnapshot(matjson::Value const& json);
+	std::string getChatSenderLabel(ChatMessage const& message) const;
 	void pushRecentMessage(ChatMessage const& message);
 	void layoutRecentMessages();
 	void updateRecentMessages(float dt);
