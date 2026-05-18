@@ -6,6 +6,7 @@
 #include <cmath>
 #include <deque>
 #include <optional>
+#include <string>
 #include "../services/AttemptCounter.hpp"
 #include "../services/DeathCounter.hpp"
 #include "../services/EventSubmitter.hpp"
@@ -21,6 +22,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 	struct Fields {
 		bool hasRespawned = false;
 		bool isCheatedRun = false;
+		std::string cheatReason;
 		bool noclipDetected = false;
 		bool speedhackDetected = false;
 		GameObject* disabledCheatObject = nullptr;
@@ -46,14 +48,31 @@ class $modify(DTPlayLayer, PlayLayer) {
 		return m_isIgnoreDamageEnabled || m_ignoreDamage;
 	}
 
-	bool isRunCheated() {
-		if (!m_fields->isCheatedRun && CheatGuard::isGameplayCheated()) {
-			m_fields->isCheatedRun = true;
+	void markRunCheated(std::string const& reason) {
+		if (m_fields->isCheatedRun) {
+			return;
 		}
 
+		m_fields->isCheatedRun = true;
+		m_fields->cheatReason = reason;
+		log::warn("Run marked as cheated on level {}: {}", m_level->m_levelID.value(), reason);
+	}
+
+	void refreshCheatGuardReason() {
+		if (m_fields->isCheatedRun) {
+			return;
+		}
+
+		if (auto reason = CheatGuard::getGameplayCheatReason()) {
+			markRunCheated(std::string(*reason));
+		}
+	}
+
+	bool isRunCheated() {
+		refreshCheatGuardReason();
+
 		if (!m_fields->isCheatedRun && isDamageBypassActive()) {
-			log::warn("Damage bypass detected on level {}", m_level->m_levelID.value());
-			m_fields->isCheatedRun = true;
+			markRunCheated("damage bypass");
 		}
 
 		return m_fields->isCheatedRun || m_fields->noclipDetected || m_fields->speedhackDetected;
@@ -78,9 +97,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 			!player->m_isDead &&
 			!m_levelEndAnimationStarted
 		) {
-			log::warn("Noclip detected on level {}", m_level->m_levelID.value());
 			m_fields->noclipDetected = true;
-			m_fields->isCheatedRun = true;
+			markRunCheated("noclip");
 		}
 	}
 
@@ -124,9 +142,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 			auto expectedRatio = m_fields->currentTimeWarp;
 
 			if (std::abs(currentRatio - expectedRatio) > 0.05 && !m_fields->speedhackDetected) {
-				log::warn("Speedhack detected on level {}", m_level->m_levelID.value());
 				m_fields->speedhackDetected = true;
-				m_fields->isCheatedRun = true;
+				markRunCheated("speedhack");
 			}
 		}
 	}
@@ -143,7 +160,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->eventSubmitter = new EventSubmitter(id);
 		m_fields->raidSubmitter = new RaidSubmitter(id);
 		m_fields->pvpSubmitter = new PvpSubmitter(id);
-		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
+		refreshCheatGuardReason();
 
 		if (AuthService::isLoggedIn() && !m_level->isPlatformer() && !m_isPracticeMode) {
 			m_fields->pvpOverlay = new PvpOverlay(this, id);
@@ -156,8 +173,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 		checkDelta(dt);
 		PlayLayer::postUpdate(dt);
 
-		if (!m_fields->isCheatedRun && !m_level->isPlatformer() && !m_isPracticeMode && isRunCheated()) {
-			log::info("Run marked as cheated on level {}", m_level->m_levelID.value());
+		if (!m_level->isPlatformer() && !m_isPracticeMode) {
+			isRunCheated();
 		}
 
 		if (m_fields->pvpOverlay) {
@@ -216,10 +233,12 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 		resetSpeedhackSampler();
 		m_fields->hasRespawned = true;
-		m_fields->isCheatedRun = CheatGuard::isGameplayCheated();
+		m_fields->isCheatedRun = false;
+		m_fields->cheatReason.clear();
 		m_fields->noclipDetected = false;
 		m_fields->speedhackDetected = false;
 		m_fields->disabledCheatObject = nullptr;
+		refreshCheatGuardReason();
 	}
 
 	void updateTimeWarp(float timeWarp) {
