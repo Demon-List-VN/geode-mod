@@ -46,7 +46,6 @@ private:
 	struct ChatMessage {
 		std::int64_t id = 0;
 		std::string senderUid;
-		std::string senderName;
 		std::string type;
 		std::string content;
 		bool senderAnonymous = false;
@@ -115,6 +114,7 @@ private:
 	void handleMessagesPayload(matjson::Value const& json, bool animateNew);
 	void handleMessageRow(matjson::Value const& row, bool animateNew);
 	void parseMatchSnapshot(matjson::Value const& json);
+	std::string formatSystemMessage(matjson::Value const& metadata) const;
 	std::string getChatSenderLabel(ChatMessage const& message) const;
 	void pushRecentMessage(ChatMessage const& message);
 	void layoutRecentMessages();

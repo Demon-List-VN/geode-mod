@@ -135,6 +135,14 @@ bool getBool(matjson::Value const& json, char const* key) {
 	return json[key].isBool() && json[key].asBool().unwrapOr(false);
 }
 
+std::string systemParticipantLabel(std::string const& uid, std::string const& currentUid) {
+	if (!uid.empty() && !currentUid.empty() && uid == currentUid) {
+		return "You";
+	}
+
+	return "Opponent";
+}
+
 std::int64_t currentEpochSeconds() {
 	return std::chrono::duration_cast<std::chrono::seconds>(
 		std::chrono::system_clock::now().time_since_epoch()
@@ -812,10 +820,9 @@ void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
 				this->scheduleMessageRefresh();
 			} else if (table == "pvpMatchMessages") {
 				log::info(
-					"PvP realtime chat event received: match={}, id={}, content_empty={}",
+					"PvP realtime chat event received: match={}, id={}",
 					getInteger(row, "matchId"),
-					getInteger(row, "id"),
-					getString(row, "content").empty()
+					getInteger(row, "id")
 				);
 				this->handleMessageRow(row, true);
 				this->scheduleMessageRefresh();
@@ -889,15 +896,12 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 	message.id = getInteger(row, "id");
 	message.senderUid = getString(row, "senderUid");
 	message.type = getString(row, "type");
-	message.content = getString(row, "content");
 	message.senderAnonymous = getBool(row, "senderAnonymous") || getBool(row, "sender_anonymous");
 
-	if (row["sender"].isObject()) {
-		message.senderName = getString(row["sender"], "name");
-	}
-
-	if (message.senderName.empty() && row["player"].isObject()) {
-		message.senderName = getString(row["player"], "name");
+	if (message.type == "system") {
+		message.content = this->formatSystemMessage(row["metadata"]);
+	} else {
+		message.content = getString(row, "content");
 	}
 
 	if (message.content.empty()) {
@@ -918,28 +922,86 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 		m_chatMessages.push_back(message);
 	}
 
-		auto previousLatest = m_latestMessageID;
-		if (message.id > m_latestMessageID) {
-			m_latestMessageID = message.id;
-		}
+	auto previousLatest = m_latestMessageID;
+	if (message.id > m_latestMessageID) {
+		m_latestMessageID = message.id;
+	}
 
-		log::info(
-			"PvP chat message received: match={}, id={}, type={}, sender={}, new={}, toast={}",
-			m_matchID,
-			message.id,
-			message.type,
-			message.senderUid,
-			message.id > previousLatest,
-			animateNew && message.id > previousLatest
-		);
+	log::info(
+		"PvP chat message received: match={}, id={}, type={}, sender={}, new={}, toast={}",
+		m_matchID,
+		message.id,
+		message.type,
+		message.senderUid,
+		message.id > previousLatest,
+		animateNew && message.id > previousLatest
+	);
 
-		if (animateNew && message.id > previousLatest) {
-			this->pushRecentMessage(message);
-		}
+	if (animateNew && message.id > previousLatest) {
+		this->pushRecentMessage(message);
+	}
 
 	if (m_chatPopup) {
 		m_chatPopup->updateHistory();
 	}
+}
+
+std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) const {
+	if (!metadata.isObject()) {
+		return "Match update.";
+	}
+
+	auto kind = getString(metadata, "kind");
+	if (kind == "progress") {
+		return "";
+	}
+
+	if (kind == "match_end") {
+		auto winnerUid = getString(metadata, "winnerUid");
+		if (winnerUid.empty()) {
+			return "The match ended in a draw. Chat will remain open briefly.";
+		}
+
+		return fmt::format(
+			"{} won the match. Chat will remain open briefly.",
+			systemParticipantLabel(winnerUid, m_currentUid)
+		);
+	}
+
+	if (kind == "resignation") {
+		auto resigning = systemParticipantLabel(getString(metadata, "resigningUid"), m_currentUid);
+		auto winnerUid = getString(metadata, "winnerUid");
+		if (winnerUid.empty()) {
+			return fmt::format("{} resigned. The match ended.", resigning);
+		}
+
+		return fmt::format(
+			"{} resigned. {} won the match. Chat will remain open briefly.",
+			resigning,
+			systemParticipantLabel(winnerUid, m_currentUid)
+		);
+	}
+
+	if (kind == "level_change_requested") {
+		return fmt::format(
+			"{} requested a level change. The level will change if both players agree.",
+			systemParticipantLabel(getString(metadata, "requesterUid"), m_currentUid)
+		);
+	}
+
+	if (kind == "level_changed") {
+		auto nextLevelID = getInteger(metadata, "nextLevelId");
+		if (nextLevelID > 0) {
+			return fmt::format(
+				"The match level changed to #{}. Progress and timer were reset.",
+				nextLevelID
+			);
+		}
+
+		return "The match level changed. Progress and timer were reset.";
+	}
+
+	return "Match update.";
 }
 
 std::string PvpOverlay::getChatHistoryText() const {
