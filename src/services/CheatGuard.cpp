@@ -17,7 +17,6 @@
 #include <Geode/cocos/CCScheduler.h>
 #include <Geode/loader/Event.hpp>
 #include <Geode/utils/general.hpp>
-#include <legowiifun.cheat_api/include/cheatAPI.hpp>
 
 #ifdef GEODE_IS_WINDOWS
 #include <Geode/platform/windows.hpp>
@@ -322,21 +321,6 @@ namespace {
 bool CheatGuard::isGameplayCheated() {
 	if (isStartPositionRun() || isCocosTimeScaleCheated()) {
 		return true;
-	}
-
-	static constexpr std::array rulesetsToCheck = {
-		ROBTOP,
-		DEMONLIST,
-		GDDL,
-		MODMAKEROPINION,
-		AREDL,
-		PEMONLIST,
-	};
-
-	for (auto ruleset : rulesetsToCheck) {
-		if (cheatAPI::isCheating(ruleset)) {
-			return true;
-		}
 	}
 
 	if (isQolModCheated()) {

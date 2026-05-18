@@ -16,12 +16,6 @@
     "source": "https://github.com/Demon-List-VN/geode-mod",
     "community": "https://discord.gg/fybxJ9Y344"
   },
-  "dependencies": {
-    "legowiifun.cheat_api": {
-      "version": ">=1.2.3",
-      "required": true
-    }
-  },
   "settings": {
     "auth": {
       "type": "custom:auth",
