@@ -126,7 +126,7 @@ std::string formatProgress(float value) {
 
 std::string formatProgressForMode(float value, std::string const& mode) {
 	if (mode == "platformer") {
-		return fmt::format("{} CP", std::max(0, static_cast<int>(std::floor(value))));
+		return fmt::format("{} PT", std::max(0, static_cast<int>(std::floor(value))));
 	}
 
 	return formatProgress(value) + "%";
