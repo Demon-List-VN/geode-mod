@@ -261,8 +261,10 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PlayLayer::resetLevel();
 
 		resetSpeedhackSampler();
-		m_fields->platformerCheckpointIds.clear();
-		m_fields->platformerCheckpointCount = 0;
+		if (!m_level->isPlatformer()) {
+			m_fields->platformerCheckpointIds.clear();
+			m_fields->platformerCheckpointCount = 0;
+		}
 		m_fields->hasRespawned = true;
 		m_fields->isCheatedRun = false;
 		m_fields->cheatReason.clear();
