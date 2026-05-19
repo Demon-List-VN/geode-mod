@@ -1,12 +1,14 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
+#include <Geode/binding/CheckpointGameObject.hpp>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <deque>
 #include <optional>
 #include <string>
+#include <unordered_set>
 #include "../services/AttemptCounter.hpp"
 #include "../services/DeathCounter.hpp"
 #include "../services/EventSubmitter.hpp"
@@ -38,6 +40,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 		RaidSubmitter *raidSubmitter;
 		PvpSubmitter *pvpSubmitter;
 		PvpOverlay *pvpOverlay = nullptr;
+		std::unordered_set<int> platformerCheckpointIds;
+		int platformerCheckpointCount = 0;
 	};
 
 	static void onModify(auto& self) {
@@ -162,7 +166,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->pvpSubmitter = new PvpSubmitter(id);
 		refreshCheatGuardReason();
 
-		if (AuthService::isLoggedIn() && !m_level->isPlatformer() && !m_isPracticeMode) {
+		if (AuthService::isLoggedIn() && !m_isPracticeMode) {
 			m_fields->pvpOverlay = new PvpOverlay(this, id);
 		}
 
@@ -186,34 +190,41 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PlayLayer::destroyPlayer(player, p1);
 
 		resetSpeedhackSampler();
+		if (m_level->isPlatformer() || m_isPracticeMode) {
+			return;
+		}
+
 		checkNoclip(player, p1);
 
 		if (!player->m_isDead) {
 			return;
 		}
 
-		if (!m_level->isPlatformer() && !m_isPracticeMode) {
-			bool isCheated = isRunCheated();
-			log::info("Run ended on level {} at {}%: {}", m_level->m_levelID.value(), this->getCurrentPercentInt(), isCheated ? "cheated" : "not cheated");
+		bool isCheated = isRunCheated();
+		log::info("Run ended on level {} at {}%: {}", m_level->m_levelID.value(), this->getCurrentPercentInt(), isCheated ? "cheated" : "not cheated");
 
-			if (isCheated) {
-				return;
-			}
-
-		    const float progress = std::min(this->getCurrentPercent(), 99.99f);
-
-			m_fields->attemptCounter.add();
-			m_fields->deathCounter.add(progress);
-			m_fields->eventSubmitter->record(progress);
-			m_fields->raidSubmitter->record(progress);
-			m_fields->pvpSubmitter->record(progress);
+		if (isCheated) {
+			return;
 		}
+
+		const float progress = std::min(this->getCurrentPercent(), 99.99f);
+
+		m_fields->attemptCounter.add();
+		m_fields->deathCounter.add(progress);
+		m_fields->eventSubmitter->record(progress);
+		m_fields->raidSubmitter->record(progress);
+		m_fields->pvpSubmitter->record(progress);
 	}
 
 	void levelComplete() {
 		PlayLayer::levelComplete();
 
 		if (!m_isPracticeMode) {
+			if (m_level->isPlatformer()) {
+				m_fields->pvpSubmitter->completePlatformer(m_fields->platformerCheckpointCount);
+				return;
+			}
+
 			bool isCheated = isRunCheated();
 			log::info("Run completed on level {}: {}", m_level->m_levelID.value(), isCheated ? "cheated" : "not cheated");
 
@@ -224,7 +235,25 @@ class $modify(DTPlayLayer, PlayLayer) {
 			m_fields->eventSubmitter->record(100);
 			m_fields->raidSubmitter->record(100);
 			m_fields->pvpSubmitter->record(100);
-		    m_fields->deathCounter.setCompleted(true);
+			m_fields->deathCounter.setCompleted(true);
+		}
+	}
+
+	void checkpointActivated(CheckpointGameObject* object) {
+		PlayLayer::checkpointActivated(object);
+
+		if (!object || !m_level->isPlatformer() || m_isPracticeMode) {
+			return;
+		}
+
+		const int checkpointID = object->m_uniqueID > 0 ? object->m_uniqueID : object->m_objectID;
+		if (checkpointID <= 0) {
+			return;
+		}
+
+		if (m_fields->platformerCheckpointIds.insert(checkpointID).second) {
+			m_fields->platformerCheckpointCount = static_cast<int>(m_fields->platformerCheckpointIds.size());
+			m_fields->pvpSubmitter->recordCheckpoint(m_fields->platformerCheckpointCount);
 		}
 	}
 
@@ -232,6 +261,8 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PlayLayer::resetLevel();
 
 		resetSpeedhackSampler();
+		m_fields->platformerCheckpointIds.clear();
+		m_fields->platformerCheckpointCount = 0;
 		m_fields->hasRespawned = true;
 		m_fields->isCheatedRun = false;
 		m_fields->cheatReason.clear();
@@ -257,7 +288,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 		if (isCheated) {
 			log::info("Skipping gameplay API submissions because the run is cheated");
-		} else {
+		} else if (!m_level->isPlatformer()) {
 			m_fields->attemptCounter.submit();
 			m_fields->deathCounter.submit();
 		}

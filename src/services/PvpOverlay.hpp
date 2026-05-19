@@ -91,6 +91,7 @@ private:
 	std::string m_anonKey;
 	std::string m_realtimeAccessToken;
 	std::string m_topic;
+	std::string m_mode = "classic";
 	PlayerProgress m_self;
 	PlayerProgress m_opponent;
 	std::vector<ChatMessage> m_chatMessages;
@@ -127,5 +128,7 @@ private:
 	bool isReadyForRealtime() const;
 	bool isActiveStatus(std::string const& status) const;
 	bool isCompletedStatus(std::string const& status) const;
+	bool isPlatformerMode() const;
+	std::string formatProgressLabel(float progress) const;
 	std::string nextRef();
 };

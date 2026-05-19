@@ -33,6 +33,9 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 			if (json["matchId"].isNumber()) {
 				if (auto locked = state.lock()) {
 					locked->matchID = static_cast<int>(json["matchId"].asDouble().unwrap());
+					if (json["mode"].isString()) {
+						locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
+					}
 					locked->inPvp.store(locked->matchID > 0);
 				}
 			}
@@ -46,24 +49,51 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 	});
 }
 
-void PvpSubmitter::submit() {
+void PvpSubmitter::submit(bool completed) {
 	if (!m_state || !m_state->inPvp.load() || m_state->matchID <= 0) {
 		return;
 	}
 
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/pvp/matches/" + std::to_string(m_state->matchID) + "/progress?progress=" + std::to_string(m_state->best);
+	if (completed) {
+		url += "&completed=true";
+	}
 	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
 	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
+bool PvpSubmitter::isPlatformerPvp() const {
+	return m_state && m_state->inPvp.load() && m_state->platformer;
+}
+
 void PvpSubmitter::record(float progress) {
-	if (!m_state || progress <= m_state->best) {
+	if (!m_state || m_state->platformer || progress <= m_state->best) {
 		return;
 	}
 
 	m_state->best = progress;
 	submit();
+}
+
+void PvpSubmitter::recordCheckpoint(int count) {
+	if (!m_state || !m_state->platformer || count <= m_state->best) {
+		return;
+	}
+
+	m_state->best = static_cast<float>(count);
+	submit();
+}
+
+void PvpSubmitter::completePlatformer(int count) {
+	if (!m_state || !m_state->platformer) {
+		return;
+	}
+
+	if (count > m_state->best) {
+		m_state->best = static_cast<float>(count);
+	}
+	submit(true);
 }

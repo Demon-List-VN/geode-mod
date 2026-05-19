@@ -124,6 +124,14 @@ std::string formatProgress(float value) {
 	return text;
 }
 
+std::string formatProgressForMode(float value, std::string const& mode) {
+	if (mode == "platformer") {
+		return fmt::format("{} CP", std::max(0, static_cast<int>(std::floor(value))));
+	}
+
+	return formatProgress(value) + "%";
+}
+
 std::string getString(matjson::Value const& json, char const* key) {
 	if (!json[key].isString()) {
 		return "";
@@ -557,6 +565,7 @@ void PvpOverlay::requestMatch() {
 void PvpOverlay::parseMatchSnapshot(matjson::Value const& json) {
 	m_matchID = static_cast<int>(getNumber(json, "matchId"));
 	m_currentUid = getString(json, "currentUid");
+	m_mode = getString(json, "mode") == "platformer" ? "platformer" : "classic";
 	auto status = getString(json, "status");
 	m_active = this->isActiveStatus(status);
 	m_chatOpen = m_active || this->isCompletedStatus(status);
@@ -866,6 +875,9 @@ void PvpOverlay::handleResultRow(matjson::Value const& row) {
 }
 
 void PvpOverlay::handleMatchRow(matjson::Value const& row) {
+	if (getString(row, "mode") == "platformer") {
+		m_mode = "platformer";
+	}
 	auto status = getString(row, "status");
 	m_active = this->isActiveStatus(status);
 	m_chatOpen = m_active || this->isCompletedStatus(status);
@@ -973,11 +985,14 @@ std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) cons
 	auto kind = getString(metadata, "kind");
 	if (kind == "progress") {
 		auto progress = getNumber(metadata, "progress");
-		return fmt::format(
-			"{} reached {}% progress.",
-			systemParticipantLabel(getString(metadata, "uid"), m_currentUid),
-			formatProgress(progress)
-		);
+		auto mode = getString(metadata, "mode") == "platformer" ? "platformer" : m_mode;
+		auto player = systemParticipantLabel(getString(metadata, "uid"), m_currentUid);
+		auto formattedProgress = formatProgressForMode(progress, mode);
+		if (mode == "platformer") {
+			return fmt::format("{} reached {}.", player, formattedProgress);
+		}
+
+		return fmt::format("{} reached {} progress.", player, formattedProgress);
 	}
 
 	if (kind == "match_end") {
@@ -1319,7 +1334,11 @@ void PvpOverlay::refreshLabel() {
 		return;
 	}
 
-	m_label->setString(fmt::format("PvP\nYou: {:.2f}%\nOpponent: {:.2f}%", m_self.progress, m_opponent.progress).c_str());
+	m_label->setString(fmt::format(
+		"PvP\nYou: {}\nOpponent: {}",
+		formatProgressLabel(m_self.progress),
+		formatProgressLabel(m_opponent.progress)
+	).c_str());
 	this->setOverlayVisible(m_active);
 	this->updateLabelPosition();
 }
@@ -1366,4 +1385,12 @@ bool PvpOverlay::isActiveStatus(std::string const& status) const {
 
 bool PvpOverlay::isCompletedStatus(std::string const& status) const {
 	return status == "completed";
+}
+
+bool PvpOverlay::isPlatformerMode() const {
+	return m_mode == "platformer";
+}
+
+std::string PvpOverlay::formatProgressLabel(float progress) const {
+	return formatProgressForMode(progress, m_mode);
 }
