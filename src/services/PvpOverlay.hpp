@@ -86,6 +86,8 @@ private:
 
 	std::int64_t m_latestMessageID = 0;
 	std::int64_t m_realtimeTokenExpiresAt = 0;
+	std::int64_t m_matchEndsAtEpoch = 0;
+	std::int64_t m_lastCountdownSeconds = -1;
 	std::string m_currentUid;
 	std::string m_supabaseUrl;
 	std::string m_anonKey;

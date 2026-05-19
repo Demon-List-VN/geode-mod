@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 
 using namespace geode::prelude;
 
@@ -172,6 +173,51 @@ std::int64_t currentEpochSeconds() {
 	return std::chrono::duration_cast<std::chrono::seconds>(
 		std::chrono::system_clock::now().time_since_epoch()
 	).count();
+}
+
+std::int64_t daysFromCivil(int year, unsigned month, unsigned day) {
+	year -= month <= 2;
+	const auto era = (year >= 0 ? year : year - 399) / 400;
+	const auto yoe = static_cast<unsigned>(year - era * 400);
+	const auto doy = (153 * (month + (month > 2 ? -3 : 9)) + 2) / 5 + day - 1;
+	const auto doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+	return era * 146097 + static_cast<int>(doe) - 719468;
+}
+
+std::int64_t parseIsoEpochSeconds(std::string const& value) {
+	if (value.size() < 19) {
+		return 0;
+	}
+
+	try {
+		const auto year = std::stoi(value.substr(0, 4));
+		const auto month = static_cast<unsigned>(std::stoi(value.substr(5, 2)));
+		const auto day = static_cast<unsigned>(std::stoi(value.substr(8, 2)));
+		const auto hour = std::stoi(value.substr(11, 2));
+		const auto minute = std::stoi(value.substr(14, 2));
+		const auto second = std::stoi(value.substr(17, 2));
+
+		if (
+			value[4] != '-' || value[7] != '-' || value[10] != 'T' ||
+			value[13] != ':' || value[16] != ':' ||
+			month < 1 || month > 12 || day < 1 || day > 31 ||
+			hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
+			second < 0 || second > 60
+		) {
+			return 0;
+		}
+
+		return daysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second;
+	} catch (...) {
+		return 0;
+	}
+}
+
+std::string formatCountdown(std::int64_t seconds) {
+	seconds = std::max<std::int64_t>(0, seconds);
+	const auto minutes = seconds / 60;
+	const auto secs = seconds % 60;
+	return fmt::format("{}:{:02}", minutes, secs);
 }
 
 matjson::Value makeChange(std::string const& event, std::string const& table, std::string const& filter) {
@@ -566,6 +612,8 @@ void PvpOverlay::parseMatchSnapshot(matjson::Value const& json) {
 	m_matchID = static_cast<int>(getNumber(json, "matchId"));
 	m_currentUid = getString(json, "currentUid");
 	m_mode = getString(json, "mode") == "platformer" ? "platformer" : "classic";
+	m_matchEndsAtEpoch = parseIsoEpochSeconds(getString(json, "endsAt"));
+	m_lastCountdownSeconds = -1;
 	auto status = getString(json, "status");
 	m_active = this->isActiveStatus(status);
 	m_chatOpen = m_active || this->isCompletedStatus(status);
@@ -878,10 +926,16 @@ void PvpOverlay::handleMatchRow(matjson::Value const& row) {
 	if (getString(row, "mode") == "platformer") {
 		m_mode = "platformer";
 	}
+	auto endsAt = getString(row, "endsAt");
+	if (!endsAt.empty()) {
+		m_matchEndsAtEpoch = parseIsoEpochSeconds(endsAt);
+		m_lastCountdownSeconds = -1;
+	}
 	auto status = getString(row, "status");
 	m_active = this->isActiveStatus(status);
 	m_chatOpen = m_active || this->isCompletedStatus(status);
 	m_chatGraceTimer = this->isCompletedStatus(status) ? CHAT_GRACE_SECONDS : -1.0f;
+	this->refreshLabel();
 	this->setOverlayVisible(m_active);
 	this->refreshChatVisibility();
 
@@ -1226,6 +1280,13 @@ void PvpOverlay::update(float dt) {
 	this->updateChatPositions();
 	this->updateRecentMessages(dt);
 
+	if (m_active && m_matchEndsAtEpoch > 0) {
+		auto countdownSeconds = std::max<std::int64_t>(0, m_matchEndsAtEpoch - currentEpochSeconds());
+		if (countdownSeconds != m_lastCountdownSeconds) {
+			this->refreshLabel();
+		}
+	}
+
 	if (m_chatGraceTimer >= 0.0f) {
 		m_chatGraceTimer -= dt;
 		if (m_chatGraceTimer <= 0.0f) {
@@ -1334,8 +1395,17 @@ void PvpOverlay::refreshLabel() {
 		return;
 	}
 
+	auto countdownSeconds = m_matchEndsAtEpoch > 0
+		? std::max<std::int64_t>(0, m_matchEndsAtEpoch - currentEpochSeconds())
+		: -1;
+	auto timerLine = countdownSeconds >= 0
+		? fmt::format("\nTime: {}", formatCountdown(countdownSeconds))
+		: "";
+	m_lastCountdownSeconds = countdownSeconds;
+
 	m_label->setString(fmt::format(
-		"PvP\nYou: {}\nOpponent: {}",
+		"PvP{}\nYou: {}\nOpponent: {}",
+		timerLine,
 		formatProgressLabel(m_self.progress),
 		formatProgressLabel(m_opponent.progress)
 	).c_str());
