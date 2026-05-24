@@ -4,6 +4,27 @@
 
 async::TaskHolder<web::WebResponse> AuthService::m_post_holder, AuthService::m_get_holder;
 
+namespace {
+    void showOTPDialog(std::string const& code) {
+        auto grantUrl = WEBSITE_URL + "/auth/otp/" + code;
+
+        geode::createQuickPopup(
+            "GDVN Login",
+            "Open GDVN website to grant access, then click <cg>Continue</c>.\nYour OTP code is: <cr>" + code + "</c>",
+            "Open Website",
+            "Continue",
+            [code, grantUrl](auto, bool btn2) {
+                if (btn2) {
+                    AuthService::checkOTP(code);
+                } else {
+                    web::openLinkInBrowser(grantUrl);
+                    showOTPDialog(code);
+                }
+            }
+        );
+    }
+}
+
 bool AuthService::isLoggedIn() {
 	std::string apiKey = Mod::get()->getSavedValue<std::string>("api-key");
 	return !apiKey.empty();
@@ -46,17 +67,7 @@ void AuthService::requestOTP() {
 			auto code = json["code"].asString().unwrap();
 
 		    geode::Loader::get()->queueInMainThread([code] {
-		        geode::createQuickPopup(
-                    "GDVN Login",
-                    "Open GDVN website and go to <cy>Settings > Auth > Grant OTP</c>.\nEnter this OTP code, then click <cg>Continue</c>.\nYour OTP code is: <cr>" + code + "</c>",
-                    "Cancel",
-                    "Continue",
-                    [code](auto, bool btn2) {
-                        if (btn2) {
-                            checkOTP(code);
-                        }
-                    }
-                );
+                showOTPDialog(code);
 		    });
 		} catch (...) {
 			log::warn("Failed to create OTP code: unexpected error");
