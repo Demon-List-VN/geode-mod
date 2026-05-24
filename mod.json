@@ -28,6 +28,12 @@
       "name": "Authentication",
       "default": ""
     },
+    "update-check": {
+      "type": "custom:update-check",
+      "name": "Updates",
+      "description": "Check for a new GDVN mod version",
+      "default": ""
+    },
     "show-level-info": {
       "type": "bool",
       "name": "Show level info",

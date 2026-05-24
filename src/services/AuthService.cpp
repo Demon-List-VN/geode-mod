@@ -10,7 +10,7 @@ namespace {
 
         geode::createQuickPopup(
             "GDVN Login",
-            "Open GDVN website to grant access, then click <cg>Continue</c>.\nYour OTP code is: <cr>" + code + "</c>",
+            "Open GDVN website to grant access, then click <cg>Continue</c>.\nIf the website does not open, open GDVN website manually and go to <cy>Settings > Auth > Grant OTP</c>.\nYour OTP code is: <cr>" + code + "</c>",
             "Open Website",
             "Continue",
             [code, grantUrl](auto, bool btn2) {
@@ -33,6 +33,10 @@ bool AuthService::isLoggedIn() {
 std::string AuthService::getToken() {
     std::string apiKey = Mod::get()->getSavedValue<std::string>("api-key");
     return apiKey;
+}
+
+std::string AuthService::getPlayerName() {
+    return Mod::get()->getSavedValue<std::string>("player-name");
 }
 
 void AuthService::login() {
@@ -100,6 +104,7 @@ void AuthService::checkOTP(std::string code) {
 			std::string player = json["player"].asString().unwrap();
 
 			Mod::get()->setSavedValue("api-key", key);
+			Mod::get()->setSavedValue("player-name", player);
 
 			FLAlertLayer::create("GDVN Login", "You are logged in as <cg>" + player + "</c>", "OK")->show();
 		} catch (...) {
@@ -118,6 +123,7 @@ void AuthService::logout() {
     m_post_holder.spawn(req.send("DELETE", url), [](web::WebResponse res) {
         try {
             Mod::get()->setSavedValue("api-key", std::string(""));
+            Mod::get()->setSavedValue("player-name", std::string(""));
             FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
         } catch (...) {
             log::warn("Failed to logout: unexpected error");
@@ -178,13 +184,16 @@ void AuthService::check() {
                 );
 
                 Mod::get()->setSavedValue("api-key", std::string(""));
+                Mod::get()->setSavedValue("player-name", std::string(""));
                 errorToast->show();
 
                 return;
             }
 
+            Mod::get()->setSavedValue("player-name", res.json().unwrap()["name"].asString().unwrap());
+
             auto successToast = geode::Notification::create(
-            "Logged in as " + res.json().unwrap()["name"].asString().unwrap(),
+            "Logged in as " + AuthService::getPlayerName(),
                 geode::NotificationIcon::Success,
                 2.0f
             );

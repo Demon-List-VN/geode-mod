@@ -9,5 +9,5 @@ class VersionChecker {
 	static async::TaskHolder<web::WebResponse> m_holder;
 	static void downloadUpdate();
 public:
-	static void checkForUpdate();
+	static void checkForUpdate(bool notifyIfCurrent = false);
 };

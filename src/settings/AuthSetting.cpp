@@ -7,6 +7,7 @@
 #include <Geode/binding/FLAlertLayer.hpp>
 
 #include "../services/AuthService.hpp"
+#include "../services/VersionChecker.hpp"
 
 using namespace geode::prelude;
 
@@ -46,6 +47,19 @@ protected:
     ButtonSprite* m_buttonSprite;
     CCMenuItemSpriteExtra* m_button;
 
+    std::string getStatusText() const {
+        if (!AuthService::isLoggedIn()) {
+            return "Not logged in";
+        }
+
+        auto playerName = AuthService::getPlayerName();
+        if (playerName.empty()) {
+            return "Logged in";
+        }
+
+        return "Logged in as " + playerName;
+    }
+
     bool init(std::shared_ptr<LoginButtonSetitngV3> setting, float width) {
         if (!SettingNodeV3::init(setting, width)) {
             return false;
@@ -58,6 +72,7 @@ protected:
         m_button = CCMenuItemSpriteExtra::create(
             m_buttonSprite, this, menu_selector(LoginButtonSettingNodeV3::onButton)
         );
+
         this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
         this->getButtonMenu()->setContentWidth(60);
         this->getButtonMenu()->updateLayout();
@@ -71,6 +86,8 @@ protected:
         SettingNodeV3::updateState(invoker);
 
         auto shouldEnable = this->getSetting()->shouldEnable();
+        this->getNameLabel()->setString(getStatusText().c_str());
+        this->getNameLabel()->setColor(AuthService::isLoggedIn() ? ccGREEN : ccWHITE);
         m_button->setEnabled(shouldEnable);
         m_buttonSprite->setCascadeColorEnabled(true);
         m_buttonSprite->setCascadeOpacityEnabled(true);
@@ -123,4 +140,113 @@ SettingNodeV3* LoginButtonSetitngV3::createNode(float width) {
 
 $execute {
     (void)Mod::get()->registerCustomSettingType("auth", &LoginButtonSetitngV3::parse);
+}
+
+class UpdateButtonSetitngV3 : public SettingV3 {
+public:
+    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
+        auto res = std::make_shared<UpdateButtonSetitngV3>();
+        auto root = checkJson(json, "UpdateButtonSettingV3");
+
+        res->init(key, modID, root);
+        res->parseNameAndDescription(root);
+        res->parseEnableIf(root);
+
+        root.checkUnknownKeys();
+        return root.ok(std::static_pointer_cast<SettingV3>(res));
+    }
+
+    bool load(matjson::Value const& json) override {
+        return true;
+    }
+
+    bool save(matjson::Value& json) const override {
+        return true;
+    }
+
+    bool isDefaultValue() const override {
+        return true;
+    }
+
+    void reset() override {}
+
+    SettingNodeV3* createNode(float width) override;
+};
+
+class UpdateButtonSettingNodeV3 : public SettingNodeV3 {
+protected:
+    ButtonSprite* m_buttonSprite;
+    CCMenuItemSpriteExtra* m_button;
+
+    bool init(std::shared_ptr<UpdateButtonSetitngV3> setting, float width) {
+        if (!SettingNodeV3::init(setting, width)) {
+            return false;
+        }
+
+        m_buttonSprite = ButtonSprite::create("Check", "goldFont.fnt", "GJ_button_01.png", .8f);
+        m_buttonSprite->setScale(.5f);
+        m_button = CCMenuItemSpriteExtra::create(
+            m_buttonSprite, this, menu_selector(UpdateButtonSettingNodeV3::onButton)
+        );
+
+        this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
+        this->getButtonMenu()->setContentWidth(60);
+        this->getButtonMenu()->updateLayout();
+
+        this->updateState(nullptr);
+
+        return true;
+    }
+
+    void updateState(CCNode* invoker) override {
+        SettingNodeV3::updateState(invoker);
+
+        auto shouldEnable = this->getSetting()->shouldEnable();
+        m_button->setEnabled(shouldEnable);
+        m_buttonSprite->setCascadeColorEnabled(true);
+        m_buttonSprite->setCascadeOpacityEnabled(true);
+        m_buttonSprite->setOpacity(shouldEnable ? 255 : 155);
+        m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
+    }
+
+    void onButton(CCObject*) {
+        VersionChecker::checkForUpdate(true);
+    }
+
+    void onCommit() override {}
+    void onResetToDefault() override {}
+
+public:
+    static UpdateButtonSettingNodeV3* create(std::shared_ptr<UpdateButtonSetitngV3> setting, float width) {
+        auto ret = new UpdateButtonSettingNodeV3();
+        if (ret->init(setting, width)) {
+            ret->autorelease();
+            return ret;
+        }
+        delete ret;
+        return nullptr;
+    }
+
+    bool hasUncommittedChanges() const override {
+        return false;
+    }
+
+    bool hasNonDefaultValue() const override {
+        return false;
+    }
+
+    std::shared_ptr<UpdateButtonSetitngV3> getSetting() const {
+        return std::static_pointer_cast<UpdateButtonSetitngV3>(SettingNodeV3::getSetting());
+    }
+};
+
+SettingNodeV3* UpdateButtonSetitngV3::createNode(float width) {
+    return UpdateButtonSettingNodeV3::create(
+        std::static_pointer_cast<UpdateButtonSetitngV3>(shared_from_this()),
+        width
+    );
+}
+
+$execute {
+    (void)Mod::get()->registerCustomSettingType("update-check", &UpdateButtonSetitngV3::parse);
 }

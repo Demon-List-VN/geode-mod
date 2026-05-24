@@ -116,13 +116,16 @@ void VersionChecker::downloadUpdate() {
 	});
 }
 
-void VersionChecker::checkForUpdate() {
+void VersionChecker::checkForUpdate(bool notifyIfCurrent) {
 	web::WebRequest req = web::WebRequest();
     req.userAgent("geode");
 
-	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [](web::WebResponse res) {
+	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [notifyIfCurrent](web::WebResponse res) {
 		try {
 			if (!res.ok()) {
+				if (notifyIfCurrent) {
+					showUpdateToast("Failed to check for GDVN updates", geode::NotificationIcon::Error);
+				}
 				return;
 			}
 
@@ -136,6 +139,9 @@ void VersionChecker::checkForUpdate() {
 			std::string localVersion = Mod::get()->getVersion().toNonVString();
 
 			if (latestVersion == localVersion) {
+				if (notifyIfCurrent) {
+					showUpdateToast("GDVN is already up to date", geode::NotificationIcon::Success);
+				}
 				return;
 			}
 
