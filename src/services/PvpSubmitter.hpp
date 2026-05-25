@@ -13,8 +13,14 @@ class PvpSubmitter {
 		int levelID = 0;
 		int matchID = 0;
 		float best = 0;
+		float progressRetryDelay = 0.0f;
+		float progressRetryValue = 0.0f;
 		std::array<size_t, 100> pendingDeathCount = {};
 		std::atomic<bool> deathSubmitInFlight{ false };
+		std::atomic<int> progressSubmitGeneration{ 0 };
+		int progressRetryGeneration = 0;
+		bool progressRetryPending = false;
+		bool progressRetryCompleted = false;
 		bool platformer = false;
 		std::atomic<bool> inPvp{ false };
 
@@ -25,6 +31,18 @@ class PvpSubmitter {
 	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder, m_death_holder;
 
 	void submit(bool completed = false);
+	static void submitProgress(
+		std::shared_ptr<State> state,
+		float progress,
+		bool completed,
+		int generation
+	);
+	static void scheduleProgressRetry(
+		std::weak_ptr<State> state,
+		float progress,
+		bool completed,
+		int generation
+	);
 	static void submitDeathCount(std::shared_ptr<State> state);
 	static std::string serializeDeathCount(std::array<size_t, 100> const& count);
 	static size_t sumDeathCount(std::array<size_t, 100> const& count);
@@ -33,6 +51,7 @@ public:
 	PvpSubmitter();
 	~PvpSubmitter();
 	PvpSubmitter(int levelID);
+	void update(float dt);
 	bool isPlatformerPvp() const;
 	void record(float progress);
 	void recordDeath(float progress);

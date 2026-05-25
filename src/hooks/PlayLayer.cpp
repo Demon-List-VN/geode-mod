@@ -118,6 +118,9 @@ class $modify(DTPlayLayer, PlayLayer) {
 		if (m_fields->pvpOverlay) {
 			m_fields->pvpOverlay->update(dt);
 		}
+		if (m_fields->pvpSubmitter) {
+			m_fields->pvpSubmitter->update(dt);
+		}
 	}
 
 	void destroyPlayer(PlayerObject * player, GameObject * p1) {
