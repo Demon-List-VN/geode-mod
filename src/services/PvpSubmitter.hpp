@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <string>
 
 using namespace geode::prelude;
 
@@ -12,7 +13,9 @@ class PvpSubmitter {
 	struct State {
 		int levelID = 0;
 		int matchID = 0;
+		std::string currentUid;
 		float sessionBest = 0;
+		float apiBest = 0;
 		float submittedBest = 0;
 		float progressRetryDelay = 0.0f;
 		float progressRetryValue = 0.0f;
@@ -54,6 +57,7 @@ public:
 	PvpSubmitter(int levelID);
 	void update(float dt);
 	bool isPlatformerPvp() const;
+	void syncApiProgress(float progress);
 	void record(float progress);
 	void recordDeath(float progress);
 	void flushDeathCount();

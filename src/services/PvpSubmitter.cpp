@@ -10,6 +10,67 @@
 
 async::TaskHolder<web::WebResponse> PvpSubmitter::m_get_holder, PvpSubmitter::m_put_holder, PvpSubmitter::m_death_holder;
 
+namespace {
+std::string getString(matjson::Value const& json, char const* key) {
+	if (!json[key].isString()) {
+		return "";
+	}
+
+	return json[key].asString().unwrapOrDefault();
+}
+
+float getNumber(matjson::Value const& json, char const* key) {
+	if (!json[key].isNumber()) {
+		return 0.0f;
+	}
+
+	return static_cast<float>(json[key].asDouble().unwrapOr(0.0));
+}
+
+float normalizeProgress(float progress, bool platformer) {
+	if (!std::isfinite(progress)) {
+		return 0.0f;
+	}
+
+	if (platformer) {
+		return std::max(0.0f, std::floor(progress));
+	}
+
+	return std::clamp(progress, 0.0f, 100.0f);
+}
+
+float getResultProgressForUid(matjson::Value const& row, std::string const& uid, bool platformer) {
+	if (uid.empty() || getString(row, "uid") != uid) {
+		return 0.0f;
+	}
+
+	auto progress = getNumber(row, "progress");
+	if (!row["result"].isNull() && row["result"].isObject()) {
+		progress = std::max(progress, getNumber(row["result"], "progress"));
+	}
+	return normalizeProgress(progress, platformer);
+}
+
+float getApiProgress(matjson::Value const& json, std::string const& uid, bool platformer) {
+	const auto currentUid = uid.empty() ? getString(json, "currentUid") : uid;
+	float progress = 0.0f;
+
+	if (json["results"].isArray()) {
+		for (auto const& result : json["results"].asArray().unwrap()) {
+			progress = std::max(progress, getResultProgressForUid(result, currentUid, platformer));
+		}
+	}
+
+	if (json["participants"].isArray()) {
+		for (auto const& participant : json["participants"].asArray().unwrap()) {
+			progress = std::max(progress, getResultProgressForUid(participant, currentUid, platformer));
+		}
+	}
+
+	return progress;
+}
+}
+
 PvpSubmitter::PvpSubmitter() : m_state(std::make_shared<State>()) {}
 
 PvpSubmitter::~PvpSubmitter() = default;
@@ -40,6 +101,11 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 						locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
 					}
 					locked->inPvp.store(locked->matchID > 0);
+					locked->currentUid = getString(json, "currentUid");
+					const float apiProgress = getApiProgress(json, locked->currentUid, locked->platformer);
+					locked->apiBest = std::max(locked->apiBest, apiProgress);
+					locked->submittedBest = std::max(locked->submittedBest, locked->apiBest);
+					locked->sessionBest = std::max(locked->sessionBest, apiProgress);
 					if (locked->inPvp.load() && locked->sessionBest > locked->submittedBest) {
 						locked->submittedBest = locked->sessionBest;
 						PvpSubmitter::submitProgress(
@@ -67,6 +133,10 @@ void PvpSubmitter::submit(bool completed) {
 	}
 
 	const float progress = m_state->sessionBest;
+	if (!completed && (progress <= m_state->apiBest || progress <= m_state->submittedBest)) {
+		return;
+	}
+
 	m_state->submittedBest = progress;
 	const int generation = m_state->progressSubmitGeneration.fetch_add(1) + 1;
 	m_state->progressRetryPending = false;
@@ -105,6 +175,15 @@ void PvpSubmitter::submitProgress(
 			}
 
 			if (res.ok()) {
+				try {
+					auto json = res.json().unwrap();
+					const float apiProgress = getApiProgress(json, locked->currentUid, locked->platformer);
+					locked->apiBest = std::max(locked->apiBest, apiProgress);
+					locked->submittedBest = std::max(locked->submittedBest, locked->apiBest);
+					locked->sessionBest = std::max(locked->sessionBest, apiProgress);
+				} catch (...) {
+					log::warn("Failed to parse saved Versus progress response for match {}", locked->matchID);
+				}
 				return;
 			}
 
@@ -218,6 +297,17 @@ void PvpSubmitter::update(float dt) {
 
 bool PvpSubmitter::isPlatformerPvp() const {
 	return m_state && m_state->inPvp.load() && m_state->platformer;
+}
+
+void PvpSubmitter::syncApiProgress(float progress) {
+	if (!m_state || !std::isfinite(progress)) {
+		return;
+	}
+
+	const float apiProgress = normalizeProgress(progress, m_state->platformer);
+	m_state->apiBest = std::max(m_state->apiBest, apiProgress);
+	m_state->submittedBest = std::max(m_state->submittedBest, m_state->apiBest);
+	m_state->sessionBest = std::max(m_state->sessionBest, apiProgress);
 }
 
 void PvpSubmitter::record(float progress) {

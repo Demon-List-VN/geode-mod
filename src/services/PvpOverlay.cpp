@@ -142,6 +142,34 @@ std::string getString(matjson::Value const& json, char const* key) {
 	return json[key].asString().unwrapOrDefault();
 }
 
+std::string getRealtimeFailureReason(matjson::Value const& payload) {
+	auto reason = getString(payload["response"], "reason");
+	if (!reason.empty()) {
+		return reason;
+	}
+
+	reason = getString(payload["response"], "message");
+	if (!reason.empty()) {
+		return reason;
+	}
+
+	reason = getString(payload, "reason");
+	if (!reason.empty()) {
+		return reason;
+	}
+
+	reason = getString(payload, "message");
+	if (!reason.empty()) {
+		return reason;
+	}
+
+	if (payload.isObject()) {
+		return payload.dump(matjson::NO_INDENTATION);
+	}
+
+	return "unknown reason";
+}
+
 std::int64_t getInteger(matjson::Value const& json, char const* key) {
 	if (!json[key].isNumber()) {
 		return 0;
@@ -486,6 +514,15 @@ bool PvpOverlay::isChatMuted() const {
 	return m_chatMuted;
 }
 
+void PvpOverlay::setRunCheated(bool cheated) {
+	if (m_runCheated == cheated) {
+		return;
+	}
+
+	m_runCheated = cheated;
+	this->refreshLabel();
+}
+
 bool PvpOverlay::hasPvpMatch() const {
 	return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
@@ -817,6 +854,7 @@ void PvpOverlay::connectRealtime() {
 	auto url = realtimeUrl(m_supabaseUrl, m_anonKey);
 
 	if (!socket->connect(url)) {
+		log::warn("Failed to init Versus realtime websocket: connect returned false");
 		m_connecting = false;
 		this->scheduleReconnect();
 		return;
@@ -865,7 +903,10 @@ void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
 		if (getString(json["payload"], "status") == "ok") {
 			m_joined = true;
 		} else {
-			log::warn("Failed to join Versus realtime channel");
+			log::warn(
+				"Failed to init Versus realtime websocket: join failed ({})",
+				getRealtimeFailureReason(json["payload"])
+			);
 			if (!m_realtimeAccessToken.empty()) {
 				m_realtimeAccessToken.clear();
 				this->sendJoin();
@@ -916,6 +957,9 @@ void PvpOverlay::handleResultRow(matjson::Value const& row) {
 	if (!m_currentUid.empty() && uid == m_currentUid) {
 		m_self.uid = uid;
 		m_self.progress = std::max(m_self.progress, progress);
+		if (m_submitter) {
+			m_submitter->syncApiProgress(m_self.progress);
+		}
 		return;
 	}
 
@@ -1415,7 +1459,8 @@ void PvpOverlay::refreshLabel() {
 	m_lastCountdownSeconds = countdownSeconds;
 
 	m_label->setString(fmt::format(
-		"Versus{}\nYou: {}\nOpponent: {}",
+		"Versus{}{}\nYou: {}\nOpponent: {}",
+		m_runCheated ? "!" : "",
 		timerLine,
 		formatProgressLabel(m_self.progress),
 		formatProgressLabel(m_opponent.progress)

@@ -1,6 +1,5 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
-#include <Geode/ui/Notification.hpp>
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
 #include <Geode/binding/CheckpointGameObject.hpp>
 #include <algorithm>
@@ -21,7 +20,6 @@ class $modify(DTPlayLayer, PlayLayer) {
 	struct Fields {
 		bool hasRespawned = false;
 		bool isCheatedRun = false;
-		bool cheatedDeathToastShown = false;
 		std::string cheatReason;
 		bool noclipDetected = false;
 		GameObject* disabledCheatObject = nullptr;
@@ -50,21 +48,10 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 		m_fields->isCheatedRun = true;
 		m_fields->cheatReason = reason;
-		log::warn("Run marked as cheated on level {}: {}", m_level->m_levelID.value(), reason);
-	}
-
-	void showCheatedDeathToast() {
-		if (m_fields->cheatedDeathToastShown) {
-			return;
+		if (m_fields->pvpOverlay) {
+			m_fields->pvpOverlay->setRunCheated(true);
 		}
-
-		m_fields->cheatedDeathToastShown = true;
-		auto reason = m_fields->cheatReason.empty() ? "unknown reason" : m_fields->cheatReason;
-		Notification::create(
-			"Attempt skipped: " + reason,
-			NotificationIcon::Error,
-			3.0f
-		)->show();
+		log::warn("Run marked as cheated on level {}: {}", m_level->m_levelID.value(), reason);
 	}
 
 	void refreshCheatGuardReason() {
@@ -119,6 +106,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 		if (AuthService::isLoggedIn() && !m_isPracticeMode) {
 			m_fields->pvpOverlay = new PvpOverlay(this, id, m_fields->pvpSubmitter);
+			m_fields->pvpOverlay->setRunCheated(m_fields->isCheatedRun);
 		}
 
 		return true;
@@ -161,7 +149,6 @@ class $modify(DTPlayLayer, PlayLayer) {
 		log::info("Run ended on level {} at {}%: {}", m_level->m_levelID.value(), this->getCurrentPercentInt(), isCheated ? "cheated" : "not cheated");
 
 		if (isCheated) {
-			showCheatedDeathToast();
 			return;
 		}
 
@@ -225,10 +212,12 @@ class $modify(DTPlayLayer, PlayLayer) {
 		}
 		m_fields->hasRespawned = true;
 		m_fields->isCheatedRun = false;
-		m_fields->cheatedDeathToastShown = false;
 		m_fields->cheatReason.clear();
 		m_fields->noclipDetected = false;
 		m_fields->disabledCheatObject = nullptr;
+		if (m_fields->pvpOverlay) {
+			m_fields->pvpOverlay->setRunCheated(false);
+		}
 		refreshCheatGuardReason();
 	}
 

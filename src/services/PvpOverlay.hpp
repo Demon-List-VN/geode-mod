@@ -28,6 +28,7 @@ public:
 	bool hasPvpMatch() const;
 	bool isChatUsable() const;
 	bool isChatMuted() const;
+	void setRunCheated(bool cheated);
 	void setChatMuted(bool muted);
 	void submitChatMessage(std::string content);
 	void notifyChatPopupClosed(PvpChatPopup* popup);
@@ -85,6 +86,7 @@ private:
 	bool m_connecting = false;
 	bool m_joined = false;
 	bool m_requestingRealtimeToken = false;
+	bool m_runCheated = false;
 
 	std::int64_t m_latestMessageID = 0;
 	std::int64_t m_realtimeTokenExpiresAt = 0;
