@@ -21,6 +21,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 	struct Fields {
 		bool hasRespawned = false;
 		bool isCheatedRun = false;
+		bool cheatedDeathToastShown = false;
 		std::string cheatReason;
 		bool noclipDetected = false;
 		GameObject* disabledCheatObject = nullptr;
@@ -50,6 +51,15 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->isCheatedRun = true;
 		m_fields->cheatReason = reason;
 		log::warn("Run marked as cheated on level {}: {}", m_level->m_levelID.value(), reason);
+	}
+
+	void showCheatedDeathToast() {
+		if (m_fields->cheatedDeathToastShown) {
+			return;
+		}
+
+		m_fields->cheatedDeathToastShown = true;
+		auto reason = m_fields->cheatReason.empty() ? "unknown reason" : m_fields->cheatReason;
 		Notification::create(
 			"Attempt skipped: " + reason,
 			NotificationIcon::Error,
@@ -117,8 +127,13 @@ class $modify(DTPlayLayer, PlayLayer) {
 	void postUpdate(float dt) {
 		PlayLayer::postUpdate(dt);
 
+		bool isCheated = false;
 		if (!m_level->isPlatformer() && !m_isPracticeMode) {
-			isRunCheated();
+			isCheated = isRunCheated();
+			if (!isCheated && m_fields->pvpSubmitter) {
+				const float progress = std::min(static_cast<float>(this->getCurrentPercentInt()), 99.0f);
+				m_fields->pvpSubmitter->record(progress);
+			}
 		}
 
 		if (m_fields->pvpOverlay) {
@@ -146,6 +161,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		log::info("Run ended on level {} at {}%: {}", m_level->m_levelID.value(), this->getCurrentPercentInt(), isCheated ? "cheated" : "not cheated");
 
 		if (isCheated) {
+			showCheatedDeathToast();
 			return;
 		}
 
@@ -209,6 +225,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		}
 		m_fields->hasRespawned = true;
 		m_fields->isCheatedRun = false;
+		m_fields->cheatedDeathToastShown = false;
 		m_fields->cheatReason.clear();
 		m_fields->noclipDetected = false;
 		m_fields->disabledCheatObject = nullptr;

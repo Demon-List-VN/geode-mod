@@ -40,6 +40,15 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 						locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
 					}
 					locked->inPvp.store(locked->matchID > 0);
+					if (locked->inPvp.load() && locked->sessionBest > locked->submittedBest) {
+						locked->submittedBest = locked->sessionBest;
+						PvpSubmitter::submitProgress(
+							locked,
+							locked->sessionBest,
+							false,
+							locked->progressSubmitGeneration.fetch_add(1) + 1
+						);
+					}
 				}
 			}
 		} catch (...) {
@@ -57,7 +66,8 @@ void PvpSubmitter::submit(bool completed) {
 		return;
 	}
 
-	const float progress = m_state->best;
+	const float progress = m_state->sessionBest;
+	m_state->submittedBest = progress;
 	const int generation = m_state->progressSubmitGeneration.fetch_add(1) + 1;
 	m_state->progressRetryPending = false;
 	submitProgress(m_state, progress, completed, generation);
@@ -211,11 +221,11 @@ bool PvpSubmitter::isPlatformerPvp() const {
 }
 
 void PvpSubmitter::record(float progress) {
-	if (!m_state || m_state->platformer || progress <= m_state->best) {
+	if (!m_state || m_state->platformer || !std::isfinite(progress) || progress <= m_state->sessionBest) {
 		return;
 	}
 
-	m_state->best = progress;
+	m_state->sessionBest = progress;
 	submit();
 }
 
@@ -233,8 +243,8 @@ void PvpSubmitter::recordDeath(float progress) {
 
 	const int percent = std::clamp(static_cast<int>(progress), 0, 99);
 	m_state->pendingDeathCount[percent]++;
-	if (progress > m_state->best) {
-		m_state->best = progress;
+	if (progress > m_state->sessionBest) {
+		m_state->sessionBest = progress;
 		submit();
 		flushDeathCount();
 		return;
@@ -250,11 +260,11 @@ void PvpSubmitter::flushDeathCount() {
 }
 
 void PvpSubmitter::recordCheckpoint(int count) {
-	if (!m_state || !m_state->platformer || count <= m_state->best) {
+	if (!m_state || !m_state->platformer || count <= m_state->sessionBest) {
 		return;
 	}
 
-	m_state->best = static_cast<float>(count);
+	m_state->sessionBest = static_cast<float>(count);
 	submit();
 }
 
@@ -263,8 +273,8 @@ void PvpSubmitter::completePlatformer(int count) {
 		return;
 	}
 
-	if (count > m_state->best) {
-		m_state->best = static_cast<float>(count);
+	if (count > m_state->sessionBest) {
+		m_state->sessionBest = static_cast<float>(count);
 	}
 	submit(true);
 }

@@ -12,7 +12,8 @@ class PvpSubmitter {
 	struct State {
 		int levelID = 0;
 		int matchID = 0;
-		float best = 0;
+		float sessionBest = 0;
+		float submittedBest = 0;
 		float progressRetryDelay = 0.0f;
 		float progressRetryValue = 0.0f;
 		std::array<size_t, 100> pendingDeathCount = {};
