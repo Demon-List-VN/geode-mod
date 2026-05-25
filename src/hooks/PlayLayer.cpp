@@ -1,5 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
+#include <Geode/ui/Notification.hpp>
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
 #include <Geode/binding/CheckpointGameObject.hpp>
 #include <algorithm>
@@ -49,6 +50,11 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->isCheatedRun = true;
 		m_fields->cheatReason = reason;
 		log::warn("Run marked as cheated on level {}: {}", m_level->m_levelID.value(), reason);
+		Notification::create(
+			"Attempt skipped: " + reason,
+			NotificationIcon::Error,
+			3.0f
+		)->show();
 	}
 
 	void refreshCheatGuardReason() {
