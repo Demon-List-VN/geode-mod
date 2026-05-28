@@ -989,9 +989,23 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 	message.type = getString(row, "type");
 	message.senderAnonymous = getBool(row, "senderAnonymous") || getBool(row, "sender_anonymous");
 	auto isProgressSystemMessage = false;
+	auto isHiddenSystemMessage = false;
 
 	if (message.type == "system") {
-		isProgressSystemMessage = getString(row["metadata"], "kind") == "progress";
+		auto const& metadata = row["metadata"];
+		auto kind = getString(metadata, "kind");
+		isProgressSystemMessage = kind == "progress";
+		isHiddenSystemMessage = kind == "play_mode";
+		this->handleSystemMetadata(metadata);
+
+		if (isHiddenSystemMessage) {
+			if (message.id > m_latestMessageID) {
+				m_latestMessageID = message.id;
+			}
+			this->refreshLabel();
+			return;
+		}
+
 		message.content = this->formatSystemMessage(row["metadata"]);
 	} else {
 		message.content = getString(row, "content");
@@ -1037,6 +1051,42 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 	if (m_chatPopup) {
 		m_chatPopup->updateHistory();
 	}
+}
+
+void PvpOverlay::handleSystemMetadata(matjson::Value const& metadata) {
+	if (!metadata.isObject()) {
+		return;
+	}
+
+	auto kind = getString(metadata, "kind");
+
+	if (kind == "level_changed") {
+		m_self.playMode = "normal";
+		m_opponent.playMode = "normal";
+		this->refreshLabel();
+		return;
+	}
+
+	if (kind != "play_mode") {
+		return;
+	}
+
+	auto uid = getString(metadata, "uid");
+	auto playMode = getString(metadata, "playMode") == "practice" ? "practice" : "normal";
+
+	if (!m_currentUid.empty() && uid == m_currentUid) {
+		m_self.uid = uid;
+		m_self.playMode = playMode;
+	} else if (!uid.empty()) {
+		if (m_opponent.uid.empty()) {
+			m_opponent.uid = uid;
+		}
+		if (m_opponent.uid == uid) {
+			m_opponent.playMode = playMode;
+		}
+	}
+
+	this->refreshLabel();
 }
 
 std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) const {
@@ -1103,6 +1153,11 @@ std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) cons
 	}
 
 	return "Match update.";
+}
+
+std::string PvpOverlay::formatPlayerLabel(std::string const& label, PlayerProgress const& player) const {
+	auto modeSuffix = player.playMode == "practice" ? " (practice)" : "";
+	return fmt::format("{}{}: {}", label, modeSuffix, formatProgressLabel(player.progress));
 }
 
 std::string PvpOverlay::getChatHistoryText() const {
@@ -1415,10 +1470,10 @@ void PvpOverlay::refreshLabel() {
 	m_lastCountdownSeconds = countdownSeconds;
 
 	m_label->setString(fmt::format(
-		"Versus{}\nYou: {}\nOpponent: {}",
+		"Versus{}\n{}\n{}",
 		timerLine,
-		formatProgressLabel(m_self.progress),
-		formatProgressLabel(m_opponent.progress)
+		formatPlayerLabel("You", m_self),
+		formatPlayerLabel("Opponent", m_opponent)
 	).c_str());
 	this->setOverlayVisible(m_active);
 	this->updateLabelPosition();

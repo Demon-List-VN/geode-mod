@@ -7,13 +7,15 @@
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> PvpSubmitter::m_get_holder, PvpSubmitter::m_put_holder, PvpSubmitter::m_death_holder;
+async::TaskHolder<web::WebResponse> PvpSubmitter::m_get_holder, PvpSubmitter::m_put_holder, PvpSubmitter::m_death_holder, PvpSubmitter::m_mode_holder;
 
 PvpSubmitter::PvpSubmitter() : m_state(std::make_shared<State>()) {}
 
 PvpSubmitter::~PvpSubmitter() = default;
 
-PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelID)) {
+PvpSubmitter::PvpSubmitter(int levelID, std::string playMode) : m_state(std::make_shared<State>(levelID)) {
+	m_state->playMode = playMode == "practice" ? "practice" : "normal";
+
 	if (!AuthService::isLoggedIn()) {
 		return;
 	}
@@ -39,6 +41,9 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 						locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
 					}
 					locked->inPvp.store(locked->matchID > 0);
+					if (locked->inPvp.load()) {
+						PvpSubmitter::submitPlayMode(locked, locked->playMode);
+					}
 				}
 			}
 		} catch (...) {
@@ -47,6 +52,30 @@ PvpSubmitter::PvpSubmitter(int levelID) : m_state(std::make_shared<State>(levelI
 			} else {
 				log::warn("Failed to check active Versus match");
 			}
+		}
+	});
+}
+
+void PvpSubmitter::submitPlayMode(std::shared_ptr<State> state, std::string const& playMode) {
+	if (!state || !state->inPvp.load() || state->matchID <= 0) {
+		return;
+	}
+
+	auto normalized = playMode == "practice" ? std::string("practice") : std::string("normal");
+	if (state->submittedPlayMode == normalized) {
+		return;
+	}
+
+	state->submittedPlayMode = normalized;
+
+	web::WebRequest req = web::WebRequest();
+	std::string url = API_URL + "/pvp/matches/" + std::to_string(state->matchID) + "/play-mode?playMode=" + normalized;
+	std::string APIKey = AuthService::getToken();
+
+	req.header("Authorization", "Bearer " + APIKey);
+	m_mode_holder.spawn(req.put(url), [normalized](web::WebResponse res) {
+		if (!res.ok()) {
+			log::warn("Failed to submit Versus play mode '{}': HTTP {}", normalized, res.code());
 		}
 	});
 }
@@ -128,6 +157,15 @@ size_t PvpSubmitter::sumDeathCount(std::array<size_t, 100> const& count) {
 
 bool PvpSubmitter::isPlatformerPvp() const {
 	return m_state && m_state->inPvp.load() && m_state->platformer;
+}
+
+void PvpSubmitter::submitPlayMode(std::string const& playMode) {
+	if (!m_state) {
+		return;
+	}
+
+	m_state->playMode = playMode == "practice" ? "practice" : "normal";
+	submitPlayMode(m_state, m_state->playMode);
 }
 
 void PvpSubmitter::record(float progress) {

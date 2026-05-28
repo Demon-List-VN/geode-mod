@@ -42,6 +42,7 @@ private:
 	struct PlayerProgress {
 		std::string uid;
 		float progress = 0.0f;
+		std::string playMode = "normal";
 	};
 
 	struct ChatMessage {
@@ -118,8 +119,10 @@ private:
 	void handleMatchRow(matjson::Value const& row);
 	void handleMessagesPayload(matjson::Value const& json, bool animateNew);
 	void handleMessageRow(matjson::Value const& row, bool animateNew);
+	void handleSystemMetadata(matjson::Value const& metadata);
 	void parseMatchSnapshot(matjson::Value const& json);
 	std::string formatSystemMessage(matjson::Value const& metadata) const;
+	std::string formatPlayerLabel(std::string const& label, PlayerProgress const& player) const;
 	std::string getChatSenderLabel(ChatMessage const& message) const;
 	void pushRecentMessage(ChatMessage const& message);
 	void layoutRecentMessages();

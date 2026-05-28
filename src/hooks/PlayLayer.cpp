@@ -31,6 +31,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 		PvpOverlay *pvpOverlay = nullptr;
 		std::unordered_set<int> platformerCheckpointIds;
 		int platformerCheckpointCount = 0;
+		bool lastPracticeMode = false;
 	};
 
 	static void onModify(auto& self) {
@@ -39,6 +40,20 @@ class $modify(DTPlayLayer, PlayLayer) {
 
 	bool isDamageBypassActive() {
 		return m_isIgnoreDamageEnabled || m_ignoreDamage;
+	}
+
+	void submitPvpPlayModeIfChanged(bool force = false) {
+		const bool isPractice = m_isPracticeMode;
+
+		if (!force && m_fields->lastPracticeMode == isPractice) {
+			return;
+		}
+
+		m_fields->lastPracticeMode = isPractice;
+
+		if (m_fields->pvpSubmitter) {
+			m_fields->pvpSubmitter->submitPlayMode(isPractice ? "practice" : "normal");
+		}
 	}
 
 	void markRunCheated(std::string const& reason) {
@@ -98,7 +113,11 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->deathCounter = DeathCounter(id, best >= 100);
 		m_fields->eventSubmitter = new EventSubmitter(id);
 		m_fields->raidSubmitter = new RaidSubmitter(id);
-		m_fields->pvpSubmitter = new PvpSubmitter(id);
+		m_fields->lastPracticeMode = m_isPracticeMode;
+		m_fields->pvpSubmitter = new PvpSubmitter(
+			id,
+			m_isPracticeMode ? "practice" : "normal"
+		);
 		refreshCheatGuardReason();
 
 		if (AuthService::isLoggedIn() && !m_isPracticeMode) {
@@ -118,6 +137,13 @@ class $modify(DTPlayLayer, PlayLayer) {
 		if (m_fields->pvpOverlay) {
 			m_fields->pvpOverlay->update(dt);
 		}
+
+		submitPvpPlayModeIfChanged();
+	}
+
+	void togglePracticeMode(bool practiceMode) {
+		PlayLayer::togglePracticeMode(practiceMode);
+		submitPvpPlayModeIfChanged(true);
 	}
 
 	void destroyPlayer(PlayerObject * player, GameObject * p1) {

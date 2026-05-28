@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <memory>
+#include <string>
 
 using namespace geode::prelude;
 
@@ -16,24 +17,28 @@ class PvpSubmitter {
 		std::array<size_t, 100> pendingDeathCount = {};
 		std::atomic<bool> deathSubmitInFlight{ false };
 		bool platformer = false;
+		std::string playMode = "normal";
+		std::string submittedPlayMode;
 		std::atomic<bool> inPvp{ false };
 
 		explicit State(int levelID = 0) : levelID(levelID) {}
 	};
 
 	std::shared_ptr<State> m_state;
-	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder, m_death_holder;
+	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder, m_death_holder, m_mode_holder;
 
 	void submit(bool completed = false);
 	static void submitDeathCount(std::shared_ptr<State> state);
+	static void submitPlayMode(std::shared_ptr<State> state, std::string const& playMode);
 	static std::string serializeDeathCount(std::array<size_t, 100> const& count);
 	static size_t sumDeathCount(std::array<size_t, 100> const& count);
 
 public:
 	PvpSubmitter();
 	~PvpSubmitter();
-	PvpSubmitter(int levelID);
+	PvpSubmitter(int levelID, std::string playMode = "normal");
 	bool isPlatformerPvp() const;
+	void submitPlayMode(std::string const& playMode);
 	void record(float progress);
 	void recordDeath(float progress);
 	void flushDeathCount();
