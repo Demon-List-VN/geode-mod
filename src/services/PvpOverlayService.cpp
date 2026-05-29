@@ -56,10 +56,10 @@ std::string realtimeUrl(std::string url, std::string const& anonKey) {
 }
 
 std::string trimCopy(std::string value) {
-	auto begin = std::find_if_not(value.begin(), value.end(), [](unsigned char c) {
+	auto begin = std::find_if_not(value.begin(), value.end(), [&](unsigned char c) {
 		return std::isspace(c);
 	});
-	auto end = std::find_if_not(value.rbegin(), value.rend(), [](unsigned char c) {
+	auto end = std::find_if_not(value.rbegin(), value.rend(), [&](unsigned char c) {
 		return std::isspace(c);
 	}).base();
 
@@ -380,14 +380,14 @@ protected:
 
 		auto upSprite = ButtonSprite::create("Up", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		upSprite->setScale(0.4f);
-		m_upButton = CCMenuItemExt::createSpriteExtra(upSprite, [this](auto*) {
+		m_upButton = CCMenuItemExt::createSpriteExtra(upSprite, [&](auto*) {
 			this->scrollHistory(1);
 		});
 		m_buttonMenu->addChildAtPosition(m_upButton, Anchor::TopRight, { -28.0f, -48.0f });
 
 		auto downSprite = ButtonSprite::create("Down", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		downSprite->setScale(0.4f);
-		m_downButton = CCMenuItemExt::createSpriteExtra(downSprite, [this](auto*) {
+		m_downButton = CCMenuItemExt::createSpriteExtra(downSprite, [&](auto*) {
 			this->scrollHistory(-1);
 		});
 		m_buttonMenu->addChildAtPosition(m_downButton, Anchor::TopRight, { -28.0f, -86.0f });
@@ -401,7 +401,7 @@ protected:
 
 		auto sendSprite = ButtonSprite::create("Send", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		sendSprite->setScale(0.55f);
-		m_sendButton = CCMenuItemExt::createSpriteExtra(sendSprite, [this](auto*) {
+		m_sendButton = CCMenuItemExt::createSpriteExtra(sendSprite, [&](auto*) {
 			this->submit();
 		});
 		m_buttonMenu->addChildAtPosition(m_sendButton, Anchor::Bottom, { 128.0f, 38.0f });
@@ -591,7 +591,7 @@ void PvpOverlayService::requestMatch() {
 	req.header("Authorization", "Bearer " + AuthService::getToken());
 	std::string url = API_URL + "/levels/" + std::to_string(m_levelID) + "/inPvp";
 
-	m_matchHolder.spawn(req.get(url), [this](web::WebResponse res) {
+	m_matchHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -679,7 +679,7 @@ void PvpOverlayService::requestRealtimeToken() {
 	req.header("Authorization", "Bearer " + AuthService::getToken());
 	std::string url = API_URL + "/auth/realtime-token";
 
-	m_tokenHolder.spawn(req.get(url), [this](web::WebResponse res) {
+	m_tokenHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		m_requestingRealtimeToken = false;
 
 		if (m_cleanedUp) {
@@ -740,7 +740,7 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 		}
 	}
 
-	m_messagesHolder.spawn(req.get(url), [this, animateNew](web::WebResponse res) {
+	m_messagesHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -792,7 +792,7 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 	req.bodyJSON(body);
 
 	auto url = API_URL + "/pvp/matches/" + std::to_string(m_matchID) + "/messages";
-	m_sendMessageHolder.spawn(req.post(url), [this](web::WebResponse res) {
+	m_sendMessageHolder.spawn(req.post(url), [&](web::WebResponse res) {
 		m_chatSending = false;
 
 		if (m_cleanedUp) {

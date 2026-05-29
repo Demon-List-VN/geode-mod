@@ -31,7 +31,7 @@ class $modify(LevelInfoLayer) {
 			auto layer = this;
 			layer->retain();
 
-		    LevelService::getLevel(id, [layer, level, loadingLabel, id, isLoggedIn](
+		    LevelService::getLevel(id, [&](
 				gdvn::models::LevelInfoResponseModel const& model,
 				web::WebResponse& res
 			) mutable {
@@ -82,7 +82,7 @@ class $modify(LevelInfoLayer) {
 				"You are not logged in, progress will not be saved to GDVN server.",
 				"Cancel",
 				"Play",
-				[this, sender](auto, bool btn2) {
+				[&](auto, bool btn2) {
 					if (btn2) {
 						m_fields->m_confirmedLoggedOutPlay = true;
 						LevelInfoLayer::onPlay(sender);

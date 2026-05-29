@@ -14,7 +14,7 @@ namespace {
             "Open GDVN website to grant access, then click <cg>Continue</c>.\nIf the website does not open, open GDVN website manually and go to <cy>Settings > Auth > Grant OTP</c>.\nYour OTP code is: <cr>" + code + "</c>",
             "Open Website",
             "Continue",
-            [code, grantUrl](auto, bool btn2) {
+            [&](auto, bool btn2) {
                 if (btn2) {
                     AuthService::checkOTP(code);
                 } else {
@@ -41,13 +41,13 @@ std::string AuthService::getPlayerName() {
 }
 
 void AuthService::login() {
-    geode::Loader::get()->queueInMainThread([] {
+    geode::Loader::get()->queueInMainThread([&] {
         geode::createQuickPopup(
             "GDVN Login",
             "Do you want to <cy>login</c> to Geometry Dash VN?",
             "Later",
             "Login",
-            [](auto, bool btn2) {
+            [&](auto, bool btn2) {
                 if (btn2) {
                     requestOTP();
                 }
@@ -60,7 +60,7 @@ void AuthService::login() {
 void AuthService::requestOTP() {
 	web::WebRequest req;
 
-	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [](web::WebResponse res) {
+	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [&](web::WebResponse res) {
 		if (!res.ok()) {
 			log::warn("Failed to create OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
@@ -81,7 +81,9 @@ void AuthService::requestOTP() {
 			return;
 		}
 
-		geode::Loader::get()->queueInMainThread([code = otp.code] {
+		auto code = otp.code;
+
+		geode::Loader::get()->queueInMainThread([&] {
 			showOTPDialog(code);
 		});
 	});
@@ -91,7 +93,7 @@ void AuthService::checkOTP(std::string code) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/otp/" + code;
 
-	m_get_holder.spawn(req.get(url), [](web::WebResponse res) {
+	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
 		if (!res.ok()) {
 			log::warn("Failed to verify OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
@@ -131,7 +133,7 @@ void AuthService::logout() {
 
     req.header("Authorization", "Bearer " + getToken());
 
-    m_post_holder.spawn(req.send("DELETE", url), [](web::WebResponse res) {
+    m_post_holder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
         Mod::get()->setSavedValue("api-key", std::string(""));
         Mod::get()->setSavedValue("player-name", std::string(""));
         FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
@@ -167,7 +169,7 @@ void AuthService::check() {
     req.header("Authorization", "Bearer " + getToken());
     req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
-    m_get_holder.spawn(req.get(url), [loadingToast](web::WebResponse res) {
+    m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
         loadingToast->hide();
 
         if (!res.ok()) {

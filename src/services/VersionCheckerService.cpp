@@ -16,7 +16,7 @@ namespace {
 	constexpr char const* MOD_FILE_NAME = "nampe.gdvn.geode";
 
 	void showUpdateToast(std::string const& message, geode::NotificationIcon icon, float time = 2.0f) {
-		geode::Loader::get()->queueInMainThread([message, icon, time] {
+		geode::Loader::get()->queueInMainThread([&] {
 			geode::Notification::create(message, icon, time)->show();
 		});
 	}
@@ -33,8 +33,8 @@ void VersionCheckerService::downloadUpdate() {
 	web::WebRequest req = web::WebRequest();
 	req.userAgent("geode");
 
-	m_holder.spawn(req.get(UPDATE_URL), [loadingToast](web::WebResponse res) {
-		geode::Loader::get()->queueInMainThread([loadingToast] {
+	m_holder.spawn(req.get(UPDATE_URL), [&](web::WebResponse res) {
+		geode::Loader::get()->queueInMainThread([&] {
 			loadingToast->hide();
 		});
 
@@ -102,7 +102,7 @@ void VersionCheckerService::downloadUpdate() {
 			return;
 		}
 
-		geode::Loader::get()->queueInMainThread([] {
+		geode::Loader::get()->queueInMainThread([&] {
 			FLAlertLayer::create(
 				"Update Installed",
 				"GDVN has been updated.\nPlease restart Geometry Dash to apply the update.",
@@ -116,7 +116,7 @@ void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
 	web::WebRequest req = web::WebRequest();
     req.userAgent("geode");
 
-	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [notifyIfCurrent](web::WebResponse res) {
+	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [&](web::WebResponse res) {
 		if (!res.ok()) {
 			if (notifyIfCurrent) {
 				showUpdateToast("Failed to check for GDVN updates", geode::NotificationIcon::Error);
@@ -145,13 +145,13 @@ void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
 			return;
 		}
 
-		geode::Loader::get()->queueInMainThread([localVersion, latestVersion] {
+		geode::Loader::get()->queueInMainThread([&] {
 			geode::createQuickPopup(
 				"Update Available",
 				"A new version of <cy>Geometry Dash VN</c> is available!\n\nCurrent: <cr>" + localVersion + "</c>\nLatest: <cg>" + latestVersion + "</c>",
 				"Close",
 				"Update",
-				[](auto, bool btn2) {
+				[&](auto, bool btn2) {
 					if (btn2) {
 						VersionCheckerService::downloadUpdate();
 					}

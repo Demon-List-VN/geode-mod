@@ -8,7 +8,7 @@
 using namespace geode::prelude;
 
 $on_mod(Loaded) {
-	listenForKeybindSettingPresses("open-pvp-chat", [](Keybind const&, bool down, bool repeat, double) {
+	listenForKeybindSettingPresses("open-pvp-chat", [&](Keybind const&, bool down, bool repeat, double) {
 		if (!down || repeat) {
 			return false;
 		}
@@ -35,7 +35,7 @@ class $modify(GDVNPauseLayer, PauseLayer) {
 
 		auto chatSprite = ButtonSprite::create("Chat", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		chatSprite->setScale(0.55f);
-		auto chatButton = CCMenuItemExt::createSpriteExtra(chatSprite, [](auto*) {
+		auto chatButton = CCMenuItemExt::createSpriteExtra(chatSprite, [&](auto*) {
 			if (auto overlay = PvpOverlayService::getActive()) {
 				overlay->openChat();
 			}

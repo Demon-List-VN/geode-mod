@@ -29,5 +29,5 @@ void DeathCounterService::submit() {
 
 	web::WebRequest req = web::WebRequest();
 	req.header("Authorization", "Bearer " + APIKey);
-	m_holder.spawn(req.post(API_URL + urlPath), [](web::WebResponse res) {});
+	m_holder.spawn(req.post(API_URL + urlPath), [&](web::WebResponse res) {});
 }

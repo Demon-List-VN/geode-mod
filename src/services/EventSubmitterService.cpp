@@ -18,7 +18,7 @@ EventSubmitterService::EventSubmitterService(int levelID) : m_state(std::make_sh
 
 	req.header("Authorization", "Bearer " + APIKey);
 	std::weak_ptr<State> state = m_state;
-	m_get_holder.spawn(req.get(url), [state](web::WebResponse res) {
+	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
 		if (auto locked = state.lock()) {
 			locked->inEvent.store(res.ok());
 		}
@@ -35,7 +35,7 @@ void EventSubmitterService::submit() {
 	std::string APIKey = AuthService::getToken();
 
 	req.header("Authorization", "Bearer " + APIKey);
-	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
+	m_put_holder.spawn(req.put(url), [&](web::WebResponse res) {});
 }
 
 void EventSubmitterService::record(float progress) {

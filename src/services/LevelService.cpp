@@ -15,7 +15,7 @@ void LevelService::getLevel(int id, GetLevelCallback callback) {
 
 	auto url = API_URL + "/lists/levels/" + std::to_string(id) + "/starred";
 
-	m_get_holder.spawn(req.get(url), [callback = std::move(callback)](web::WebResponse res) mutable {
+	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) mutable {
 		gdvn::models::LevelInfoResponseModel level;
 
 		if (res.ok()) {

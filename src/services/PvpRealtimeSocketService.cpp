@@ -65,7 +65,7 @@ public:
 		socket->disablePerMessageDeflate();
 
 		auto weakSelf = this->weak_from_this();
-		socket->setOnMessageCallback([weakSelf](ix::WebSocketMessagePtr const& msg) {
+		socket->setOnMessageCallback([&](ix::WebSocketMessagePtr const& msg) {
 			auto self = weakSelf.lock();
 			if (!self || !msg) {
 				return;
@@ -137,7 +137,7 @@ private:
 		m_open.store(true);
 		auto weakSelf = this->weak_from_this();
 
-		geode::Loader::get()->queueInMainThread([weakSelf] {
+		geode::Loader::get()->queueInMainThread([&] {
 			if (auto self = weakSelf.lock()) {
 				if (auto* delegate = self->m_delegate.load(); delegate && !self->m_closed.load()) {
 					delegate->onRealtimeOpen();
@@ -153,7 +153,7 @@ private:
 
 		auto weakSelf = this->weak_from_this();
 
-		geode::Loader::get()->queueInMainThread([weakSelf, message] {
+		geode::Loader::get()->queueInMainThread([&] {
 			if (auto self = weakSelf.lock()) {
 				if (auto* delegate = self->m_delegate.load(); delegate && !self->m_closed.load()) {
 					delegate->onRealtimeMessage(message);
@@ -170,7 +170,7 @@ private:
 		m_open.store(false);
 		auto weakSelf = this->weak_from_this();
 
-		geode::Loader::get()->queueInMainThread([weakSelf] {
+		geode::Loader::get()->queueInMainThread([&] {
 			if (auto self = weakSelf.lock()) {
 				if (auto* delegate = self->m_delegate.exchange(nullptr)) {
 					delegate->onRealtimeClose();
