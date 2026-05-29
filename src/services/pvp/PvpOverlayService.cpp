@@ -1,5 +1,6 @@
 #include "PvpOverlayService.hpp"
 
+#include "../../adapters/PvpMatchAdapter.hpp"
 #include "../../adapters/PvpMessageAdapter.hpp"
 #include "../../clients/auth/AuthClient.hpp"
 #include "../../clients/level/LevelClient.hpp"
@@ -135,34 +136,6 @@ std::string formatProgressForMode(float value, std::string const& mode) {
     return formatProgress(value) + "%";
 }
 
-std::string getString(matjson::Value const& json, char const* key) {
-    if (!json[key].isString()) {
-        return "";
-    }
-
-    return json[key].asString().unwrapOrDefault();
-}
-
-std::int64_t getInteger(matjson::Value const& json, char const* key) {
-    if (!json[key].isNumber()) {
-        return 0;
-    }
-
-    return static_cast<std::int64_t>(json[key].asDouble().unwrapOr(0.0));
-}
-
-float getNumber(matjson::Value const& json, char const* key) {
-    if (!json[key].isNumber()) {
-        return 0.0f;
-    }
-
-    return static_cast<float>(json[key].asDouble().unwrapOr(0.0));
-}
-
-bool getBool(matjson::Value const& json, char const* key) {
-    return json[key].isBool() && json[key].asBool().unwrapOr(false);
-}
-
 std::string systemParticipantLabel(std::string const& uid, std::string const& currentUid) {
     if (!uid.empty() && !currentUid.empty() && uid == currentUid) {
         return "You";
@@ -236,23 +209,6 @@ matjson::Value makeChange(std::string const& event, std::string const& table, st
     return change;
 }
 
-matjson::Value const& realtimeRecord(matjson::Value const& payload) {
-    auto const& data = payload["data"];
-
-    if (data["record"].isObject()) {
-        return data["record"];
-    }
-
-    if (payload["record"].isObject()) {
-        return payload["record"];
-    }
-
-    if (payload["new"].isObject()) {
-        return payload["new"];
-    }
-
-    return payload;
-}
 } // namespace gdvn::pvp_overlay_detail
 using namespace gdvn::pvp_overlay_detail;
 
@@ -585,7 +541,7 @@ void PvpOverlayService::requestMatch() {
             return;
         }
 
-        this->parseMatchSnapshot(match.rawJson);
+        this->parseMatchSnapshot(PvpMatchAdapter::matchSnapshotFromJson(match.rawJson));
         this->refreshLabel();
 
         if (this->isReadyForRealtime()) {
@@ -594,13 +550,13 @@ void PvpOverlayService::requestMatch() {
     });
 }
 
-void PvpOverlayService::parseMatchSnapshot(matjson::Value const& json) {
-    m_matchID = static_cast<int>(getNumber(json, "matchId"));
-    m_currentUid = getString(json, "currentUid");
-    m_mode = getString(json, "mode") == "platformer" ? "platformer" : "classic";
-    m_matchEndsAtEpoch = parseIsoEpochSeconds(getString(json, "endsAt"));
+void PvpOverlayService::parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot) {
+    m_matchID = snapshot.matchID;
+    m_currentUid = snapshot.currentUid;
+    m_mode = snapshot.mode == "platformer" ? "platformer" : "classic";
+    m_matchEndsAtEpoch = parseIsoEpochSeconds(snapshot.endsAt);
     m_lastCountdownSeconds = -1;
-    auto status = getString(json, "status");
+    auto status = snapshot.status;
     m_active = this->isActiveStatus(status);
     m_chatOpen = m_active || this->isCompletedStatus(status);
     m_chatGraceTimer = this->isCompletedStatus(status) ? CHAT_GRACE_SECONDS : -1.0f;
@@ -608,15 +564,11 @@ void PvpOverlayService::parseMatchSnapshot(matjson::Value const& json) {
     m_self = {};
     m_opponent = {};
 
-    if (json["participants"].isArray()) {
-        for (auto const& participant : json["participants"].asArray().unwrap()) {
+    for (auto const& participant : snapshot.participants) {
+        if (participant.valid) {
             PlayerProgress player;
-            player.uid = getString(participant, "uid");
-            player.progress = getNumber(participant, "progress");
-
-            if (!participant["result"].isNull() && participant["result"].isObject()) {
-                player.progress = std::max(player.progress, getNumber(participant["result"], "progress"));
-            }
+            player.uid = participant.uid;
+            player.progress = participant.progress;
 
             if (!m_currentUid.empty() && player.uid == m_currentUid) {
                 m_self = player;
@@ -626,10 +578,8 @@ void PvpOverlayService::parseMatchSnapshot(matjson::Value const& json) {
         }
     }
 
-    if (json["results"].isArray()) {
-        for (auto const& result : json["results"].asArray().unwrap()) {
-            this->handleResultRow(result);
-        }
+    for (auto const& result : snapshot.results) {
+        this->handleResultRow(result);
     }
 
     this->setOverlayVisible(m_active);
@@ -794,13 +744,13 @@ void PvpOverlayService::onRealtimeMessage(std::string const& message) {
         return;
     }
 
-    auto json = matjson::parse(message);
-    if (!json) {
+    auto dto = PvpMatchAdapter::realtimeMessageFromString(message);
+    if (!dto.valid) {
         log::warn("Failed to parse Versus realtime message");
         return;
     }
 
-    this->handleRealtimeMessage(json.unwrap());
+    this->handleRealtimeMessage(dto);
 }
 
 void PvpOverlayService::onRealtimeClose() {
@@ -813,11 +763,9 @@ void PvpOverlayService::onRealtimeClose() {
     }
 }
 
-void PvpOverlayService::handleRealtimeMessage(matjson::Value const& json) {
-    auto event = getString(json, "event");
-
-    if (event == "phx_reply") {
-        if (getString(json["payload"], "status") == "ok") {
+void PvpOverlayService::handleRealtimeMessage(PvpMatchRealtimeMessageDto const& message) {
+    if (message.event == "phx_reply") {
+        if (message.replyOk) {
             m_joined = true;
         } else {
             log::warn("Failed to join Versus realtime channel");
@@ -829,66 +777,50 @@ void PvpOverlayService::handleRealtimeMessage(matjson::Value const& json) {
         return;
     }
 
-    if (event == "postgres_changes") {
-        auto const& payload = json["payload"];
-        auto const& data = payload["data"];
-        auto table = getString(data, "table");
-        if (table.empty()) {
-            table = getString(payload, "table");
-        }
-        auto const& row = realtimeRecord(payload);
-        if (table.empty() && row["matchId"].isNumber() && row["content"].isString()) {
-            table = "pvpMatchMessages";
-        }
-
-        if (table == "pvpMatchResults") {
-            this->handleResultRow(row);
+    if (message.event == "postgres_changes") {
+        if (message.table == "pvpMatchResults") {
+            this->handleResultRow(PvpMatchAdapter::playerProgressFromJson(message.row));
             this->refreshLabel();
             this->scheduleMessageRefresh();
-        } else if (table == "pvpMatches") {
-            this->handleMatchRow(row);
+        } else if (message.table == "pvpMatches") {
+            this->handleMatchRow(PvpMatchAdapter::matchRowFromJson(message.row));
             this->scheduleMessageRefresh();
-        } else if (table == "pvpMatchMessages") {
-            log::info("Versus realtime chat event received: match={}, id={}", getInteger(row, "matchId"),
-                      getInteger(row, "id"));
-            this->handleMessageRow(PvpMessageAdapter::fromJson(row), true);
+        } else if (message.table == "pvpMatchMessages") {
+            log::info("Versus realtime chat event received: match={}, id={}", message.rowMatchID, message.rowID);
+            this->handleMessageRow(PvpMessageAdapter::fromJson(message.row), true);
             this->scheduleMessageRefresh();
         }
     }
 }
 
-void PvpOverlayService::handleResultRow(matjson::Value const& row) {
-    auto uid = getString(row, "uid");
-    auto progress = getNumber(row, "progress");
-
-    if (uid.empty()) {
+void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
+    if (!row.valid) {
         return;
     }
 
-    if (!m_currentUid.empty() && uid == m_currentUid) {
-        m_self.uid = uid;
-        m_self.progress = std::max(m_self.progress, progress);
+    if (!m_currentUid.empty() && row.uid == m_currentUid) {
+        m_self.uid = row.uid;
+        m_self.progress = std::max(m_self.progress, row.progress);
         return;
     }
 
-    m_opponent.uid = uid;
-    m_opponent.progress = std::max(m_opponent.progress, progress);
-    if (progress >= 100.0f && m_submitter) {
+    m_opponent.uid = row.uid;
+    m_opponent.progress = std::max(m_opponent.progress, row.progress);
+    if (row.progress >= 100.0f && m_submitter) {
         m_submitter->flushDeathCount();
     }
 }
 
-void PvpOverlayService::handleMatchRow(matjson::Value const& row) {
+void PvpOverlayService::handleMatchRow(PvpMatchRowDto const& row) {
     const bool wasActive = m_active;
-    if (getString(row, "mode") == "platformer") {
+    if (row.mode == "platformer") {
         m_mode = "platformer";
     }
-    auto endsAt = getString(row, "endsAt");
-    if (!endsAt.empty()) {
-        m_matchEndsAtEpoch = parseIsoEpochSeconds(endsAt);
+    if (!row.endsAt.empty()) {
+        m_matchEndsAtEpoch = parseIsoEpochSeconds(row.endsAt);
         m_lastCountdownSeconds = -1;
     }
-    auto status = getString(row, "status");
+    auto status = row.status;
     m_active = this->isActiveStatus(status);
     m_chatOpen = m_active || this->isCompletedStatus(status);
     m_chatGraceTimer = this->isCompletedStatus(status) ? CHAT_GRACE_SECONDS : -1.0f;
@@ -932,8 +864,8 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
     auto isHiddenSystemMessage = false;
 
     if (message.type == "system") {
-        auto const& metadata = dto.metadata;
-        auto kind = getString(metadata, "kind");
+        auto metadata = PvpMatchAdapter::systemMetadataFromJson(dto.metadata);
+        auto kind = metadata.kind;
         isProgressSystemMessage = kind == "progress";
         isHiddenSystemMessage = kind == "play_mode";
         this->handleSystemMetadata(metadata);
@@ -946,7 +878,7 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
             return;
         }
 
-        message.content = this->formatSystemMessage(dto.metadata);
+        message.content = this->formatSystemMessage(metadata);
     } else {
         message.content = dto.content;
     }
@@ -986,12 +918,12 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
     }
 }
 
-void PvpOverlayService::handleSystemMetadata(matjson::Value const& metadata) {
-    if (!metadata.isObject()) {
+void PvpOverlayService::handleSystemMetadata(PvpMatchSystemMetadataDto const& metadata) {
+    if (!metadata.valid) {
         return;
     }
 
-    auto kind = getString(metadata, "kind");
+    auto kind = metadata.kind;
 
     if (kind == "level_changed") {
         m_self.playMode = "normal";
@@ -1004,8 +936,8 @@ void PvpOverlayService::handleSystemMetadata(matjson::Value const& metadata) {
         return;
     }
 
-    auto uid = getString(metadata, "uid");
-    auto playMode = getString(metadata, "playMode") == "practice" ? "practice" : "normal";
+    auto uid = metadata.uid;
+    auto playMode = metadata.playMode == "practice" ? "practice" : "normal";
 
     if (!m_currentUid.empty() && uid == m_currentUid) {
         m_self.uid = uid;
@@ -1022,16 +954,16 @@ void PvpOverlayService::handleSystemMetadata(matjson::Value const& metadata) {
     this->refreshLabel();
 }
 
-std::string PvpOverlayService::formatSystemMessage(matjson::Value const& metadata) const {
-    if (!metadata.isObject()) {
+std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const {
+    if (!metadata.valid) {
         return "Match update.";
     }
 
-    auto kind = getString(metadata, "kind");
+    auto kind = metadata.kind;
     if (kind == "progress") {
-        auto progress = getNumber(metadata, "progress");
-        auto mode = getString(metadata, "mode") == "platformer" ? "platformer" : m_mode;
-        auto player = systemParticipantLabel(getString(metadata, "uid"), m_currentUid);
+        auto progress = metadata.progress;
+        auto mode = metadata.mode == "platformer" ? "platformer" : m_mode;
+        auto player = systemParticipantLabel(metadata.uid, m_currentUid);
         auto formattedProgress = formatProgressForMode(progress, mode);
         if (mode == "platformer") {
             return fmt::format("{} reached {}.", player, formattedProgress);
@@ -1041,7 +973,7 @@ std::string PvpOverlayService::formatSystemMessage(matjson::Value const& metadat
     }
 
     if (kind == "match_end") {
-        auto winnerUid = getString(metadata, "winnerUid");
+        auto winnerUid = metadata.winnerUid;
         if (winnerUid.empty()) {
             return "The match ended in a draw. Chat will remain open briefly.";
         }
@@ -1051,8 +983,8 @@ std::string PvpOverlayService::formatSystemMessage(matjson::Value const& metadat
     }
 
     if (kind == "resignation") {
-        auto resigning = systemParticipantLabel(getString(metadata, "resigningUid"), m_currentUid);
-        auto winnerUid = getString(metadata, "winnerUid");
+        auto resigning = systemParticipantLabel(metadata.resigningUid, m_currentUid);
+        auto winnerUid = metadata.winnerUid;
         if (winnerUid.empty()) {
             return fmt::format("{} resigned. The match ended.", resigning);
         }
@@ -1063,11 +995,11 @@ std::string PvpOverlayService::formatSystemMessage(matjson::Value const& metadat
 
     if (kind == "level_change_requested") {
         return fmt::format("{} requested a level change. The level will change if both players agree.",
-                           systemParticipantLabel(getString(metadata, "requesterUid"), m_currentUid));
+                           systemParticipantLabel(metadata.requesterUid, m_currentUid));
     }
 
     if (kind == "level_changed") {
-        auto nextLevelID = getInteger(metadata, "nextLevelId");
+        auto nextLevelID = metadata.nextLevelID;
         if (nextLevelID > 0) {
             return fmt::format("The match level changed to #{}. Progress and timer were reset.", nextLevelID);
         }

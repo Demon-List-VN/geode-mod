@@ -1,5 +1,10 @@
 #pragma once
 
+#include "../../dtos/pvp/match/PvpMatchPlayerProgressDto.hpp"
+#include "../../dtos/pvp/match/PvpMatchRealtimeMessageDto.hpp"
+#include "../../dtos/pvp/match/PvpMatchRowDto.hpp"
+#include "../../dtos/pvp/match/PvpMatchSnapshotDto.hpp"
+#include "../../dtos/pvp/match/PvpMatchSystemMetadataDto.hpp"
 #include "../../dtos/pvp/PvpMessageDto.hpp"
 #include "../../dtos/pvp/PvpMessagesResponseDto.hpp"
 #include "PvpRealtimeSocketService.hpp"
@@ -111,14 +116,14 @@ class PvpOverlayService final : public PvpRealtimeSocketDelegateService {
     void sendJoin();
     void sendHeartbeat();
     void sendJson(matjson::Value const& json);
-    void handleRealtimeMessage(matjson::Value const& json);
-    void handleResultRow(matjson::Value const& row);
-    void handleMatchRow(matjson::Value const& row);
+    void handleRealtimeMessage(PvpMatchRealtimeMessageDto const& message);
+    void handleResultRow(PvpMatchPlayerProgressDto const& row);
+    void handleMatchRow(PvpMatchRowDto const& row);
     void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
     void handleMessageRow(PvpMessageDto const& message, bool animateNew);
-    void handleSystemMetadata(matjson::Value const& metadata);
-    void parseMatchSnapshot(matjson::Value const& json);
-    std::string formatSystemMessage(matjson::Value const& metadata) const;
+    void handleSystemMetadata(PvpMatchSystemMetadataDto const& metadata);
+    void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
+    std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PlayerProgress const& player) const;
     std::string getChatSenderLabel(ChatMessage const& message) const;
     void pushRecentMessage(ChatMessage const& message);
