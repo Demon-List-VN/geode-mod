@@ -82,6 +82,7 @@ class PvpOverlayService final : public PvpRealtimeClientDelegate {
     PvpOverlayPlayerProgressModel m_opponent;
     std::vector<PvpOverlayChatMessageModel> m_chatMessages;
     std::vector<PvpOverlayRecentChatMessageModel> m_recentMessages;
+    std::vector<CCLabelBMFont*> m_recentMessageLabels;
 
     void createLabel();
     void createChatNodes();

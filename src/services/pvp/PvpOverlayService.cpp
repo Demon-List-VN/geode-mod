@@ -18,6 +18,7 @@
 #include <cctype>
 #include <charconv>
 #include <chrono>
+#include <cstddef>
 #include <cmath>
 #include <cstdint>
 
@@ -443,11 +444,13 @@ void PvpOverlayService::setChatMuted(bool muted) {
     Mod::get()->setSavedValue<bool>("pvp-chat-muted", muted);
 
     if (muted) {
-        for (auto& message : m_recentMessages) {
-            if (message.label) {
-                message.label->removeFromParentAndCleanup(true);
+        for (auto*& label : m_recentMessageLabels) {
+            if (label) {
+                label->removeFromParentAndCleanup(true);
+                label = nullptr;
             }
         }
+        m_recentMessageLabels.clear();
         m_recentMessages.clear();
     }
 
@@ -1017,11 +1020,16 @@ void PvpOverlayService::pushRecentMessage(PvpOverlayChatMessageModel const& mess
     label->limitLabelWidth(280.0f, 0.55f, 0.3f);
     m_chatStack->addChild(label);
 
-    m_recentMessages.push_back({message.id, CHAT_MESSAGE_LIFETIME, label});
+    m_recentMessages.push_back({message.id, CHAT_MESSAGE_LIFETIME});
+    m_recentMessageLabels.push_back(label);
 
     while (m_recentMessages.size() > MAX_RECENT_MESSAGES) {
-        if (auto oldLabel = m_recentMessages.front().label) {
-            oldLabel->removeFromParentAndCleanup(true);
+        if (!m_recentMessageLabels.empty()) {
+            auto* oldLabel = m_recentMessageLabels.front();
+            m_recentMessageLabels.erase(m_recentMessageLabels.begin());
+            if (oldLabel) {
+                oldLabel->removeFromParentAndCleanup(true);
+            }
         }
         m_recentMessages.erase(m_recentMessages.begin());
     }
@@ -1032,9 +1040,12 @@ void PvpOverlayService::pushRecentMessage(PvpOverlayChatMessageModel const& mess
 
 void PvpOverlayService::layoutRecentMessages() {
     for (size_t i = 0; i < m_recentMessages.size(); ++i) {
-        if (auto label = m_recentMessages[i].label) {
+        if (i < m_recentMessageLabels.size()) {
+            auto* label = m_recentMessageLabels[i];
             auto reverseIndex = m_recentMessages.size() - i - 1;
-            label->setPosition({0.0f, static_cast<float>(reverseIndex) * 12.0f});
+            if (label) {
+                label->setPosition({0.0f, static_cast<float>(reverseIndex) * 12.0f});
+            }
         }
     }
 }
@@ -1044,24 +1055,28 @@ void PvpOverlayService::updateRecentMessages(float dt) {
         return;
     }
 
-    for (auto& message : m_recentMessages) {
+    for (size_t i = 0; i < m_recentMessages.size(); ++i) {
+        auto& message = m_recentMessages[i];
         message.timeLeft -= dt;
-        if (message.label) {
+        if (i < m_recentMessageLabels.size() && m_recentMessageLabels[i]) {
             auto opacity = message.timeLeft < CHAT_FADE_TIME
                                ? static_cast<unsigned char>(std::max(0.0f, message.timeLeft / CHAT_FADE_TIME) * 220.0f)
                                : static_cast<unsigned char>(220);
-            message.label->setOpacity(opacity);
+            m_recentMessageLabels[i]->setOpacity(opacity);
         }
     }
 
-    for (auto it = m_recentMessages.begin(); it != m_recentMessages.end();) {
-        if (it->timeLeft <= 0.0f) {
-            if (it->label) {
-                it->label->removeFromParentAndCleanup(true);
+    for (size_t i = 0; i < m_recentMessages.size();) {
+        if (m_recentMessages[i].timeLeft <= 0.0f) {
+            if (i < m_recentMessageLabels.size()) {
+                if (auto* label = m_recentMessageLabels[i]) {
+                    label->removeFromParentAndCleanup(true);
+                }
+                m_recentMessageLabels.erase(m_recentMessageLabels.begin() + static_cast<std::ptrdiff_t>(i));
             }
-            it = m_recentMessages.erase(it);
+            m_recentMessages.erase(m_recentMessages.begin() + static_cast<std::ptrdiff_t>(i));
         } else {
-            ++it;
+            ++i;
         }
     }
 
@@ -1175,6 +1190,8 @@ void PvpOverlayService::cleanup() {
         m_chatStack->removeFromParentAndCleanup(true);
         m_chatStack = nullptr;
     }
+    m_recentMessageLabels.clear();
+    m_recentMessages.clear();
 }
 
 void PvpOverlayService::refreshLabel() {
