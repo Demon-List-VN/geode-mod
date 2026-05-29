@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
-#include "AuthService.hpp"
-#include "../adapters/ActivePvpMatchResponseAdapter.hpp"
-#include "../clients/LevelClient.hpp"
-#include "../clients/PvpClient.hpp"
+#include "../auth/AuthService.hpp"
+#include "../../adapters/ActivePvpMatchResponseAdapter.hpp"
+#include "../../clients/level/LevelClient.hpp"
+#include "../../clients/pvp/PvpClient.hpp"
 
 PvpSubmitterService::PvpSubmitterService() : m_state(std::make_shared<State>()) {}
 

@@ -1,9 +1,8 @@
 #include "EventSubmitterService.hpp"
 #include <Geode/Geode.hpp>
 
-#include "AuthService.hpp"
-#include "../clients/EventClient.hpp"
-#include "../clients/LevelClient.hpp"
+#include "../auth/AuthService.hpp"
+#include "../../clients/event/EventClient.hpp"
 
 EventSubmitterService::EventSubmitterService() : m_state(std::make_shared<State>()) {}
 
@@ -11,7 +10,7 @@ EventSubmitterService::~EventSubmitterService() = default;
 
 EventSubmitterService::EventSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	std::weak_ptr<State> state = m_state;
-	LevelClient::getEventLevel(levelID, "", [&](web::WebResponse& res) {
+	EventClient::getEventLevel(levelID, "", [&](web::WebResponse& res) {
 		if (auto locked = state.lock()) {
 			locked->inEvent.store(res.ok());
 		}

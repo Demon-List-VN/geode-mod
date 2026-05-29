@@ -3,7 +3,7 @@
 #include <Geode/modify/PauseLayer.hpp> // DO NOT REMOVE
 #include <Geode/loader/SettingV3.hpp>
 
-#include "../services/PvpOverlayService.hpp"
+#include "../services/pvp/PvpOverlayService.hpp"
 
 using namespace geode::prelude;
 

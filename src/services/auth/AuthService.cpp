@@ -1,9 +1,9 @@
-#include "AuthService.hpp"
-#include "../adapters/AuthMeResponseAdapter.hpp"
-#include "../adapters/OtpGrantResponseAdapter.hpp"
-#include "../adapters/OtpResponseAdapter.hpp"
-#include "../clients/AuthClient.hpp"
-#include "../common.hpp"
+#include "../auth/AuthService.hpp"
+#include "../../adapters/AuthMeResponseAdapter.hpp"
+#include "../../adapters/OtpGrantResponseAdapter.hpp"
+#include "../../adapters/OtpResponseAdapter.hpp"
+#include "../../clients/auth/AuthClient.hpp"
+#include "../../common.hpp"
 #include <Geode/ui/Notification.hpp>
 
 static void showOTPDialog(std::string const& code) {

@@ -6,14 +6,14 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
-#include "../services/AttemptCounterService.hpp"
-#include "../services/DeathCounterService.hpp"
-#include "../services/EventSubmitterService.hpp"
-#include "../services/RaidSubmitterService.hpp"
-#include "../services/PvpSubmitterService.hpp"
-#include "../services/PvpOverlayService.hpp"
-#include "../services/CheatGuardService.hpp"
-#include "../services/AuthService.hpp"
+#include "../services/progress/AttemptCounterService.hpp"
+#include "../services/progress/DeathCounterService.hpp"
+#include "../services/event/EventSubmitterService.hpp"
+#include "../services/event/RaidSubmitterService.hpp"
+#include "../services/pvp/PvpSubmitterService.hpp"
+#include "../services/pvp/PvpOverlayService.hpp"
+#include "../services/cheat/CheatGuardService.hpp"
+#include "../services/auth/AuthService.hpp"
 
 using namespace geode::prelude;
 

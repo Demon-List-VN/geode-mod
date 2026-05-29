@@ -1,8 +1,8 @@
 #include "DeathCounterService.hpp"
 #include <Geode/Geode.hpp>
 
-#include "AuthService.hpp"
-#include "../clients/ProgressClient.hpp"
+#include "../auth/AuthService.hpp"
+#include "../../clients/pvp/PvpProgressClient.hpp"
 
 DeathCounterService::DeathCounterService() {}
 
@@ -17,5 +17,5 @@ void DeathCounterService::add(int percent) {
 void DeathCounterService::submit() {
 	using namespace geode::prelude;
 
-	ProgressClient::postDeathCount(deathData.levelID, deathData.serialize(), completed, [&](web::WebResponse& res) {});
+	PvpProgressClient::postDeathCount(deathData.levelID, deathData.serialize(), completed, [&](web::WebResponse& res) {});
 }

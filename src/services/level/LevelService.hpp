@@ -4,7 +4,7 @@
 #include <Geode/utils/web.hpp>
 #include <functional>
 
-#include "../dtos/LevelInfoResponseDto.hpp"
+#include "../../dtos/level/LevelInfoResponseDto.hpp"
 
 using namespace geode::prelude;
 

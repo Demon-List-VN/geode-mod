@@ -1,6 +1,6 @@
 #include "VersionCheckerService.hpp"
-#include "../adapters/GithubReleaseResponseAdapter.hpp"
-#include "../clients/UpdateClient.hpp"
+#include "../../adapters/GithubReleaseResponseAdapter.hpp"
+#include "../../clients/update/UpdateClient.hpp"
 #include <Geode/loader/Dirs.hpp>
 #include <Geode/loader/ModMetadata.hpp>
 #include <Geode/Geode.hpp>

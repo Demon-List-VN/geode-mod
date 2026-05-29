@@ -13,5 +13,4 @@ public:
 
 	static void getLevel(int id, Callback callback);
 	static void getActivePvpMatch(int levelID, Callback callback);
-	static void getEventLevel(int levelID, std::string const& type, Callback callback);
 };

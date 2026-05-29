@@ -1,6 +1,7 @@
 #include "PvpClient.hpp"
 
-#include "../common.hpp"
+#include "../../common.hpp"
+#include "../../utils/AuthConfig.hpp"
 #include <vector>
 
 namespace {
@@ -9,15 +10,11 @@ async::TaskHolder<web::WebResponse> s_postHolder;
 async::TaskHolder<web::WebResponse> s_getHolder;
 }
 
-static std::string getToken() {
-	return Mod::get()->getSavedValue<std::string>("api-key");
-}
-
 void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/play-mode?playMode=" + playMode;
 
-	req.header("Authorization", "Bearer " + getToken());
+	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_putHolder.spawn(req.put(url), [&](web::WebResponse res) {
 		callback(res);
@@ -32,7 +29,7 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
 		url += "&completed=true";
 	}
 
-	req.header("Authorization", "Bearer " + getToken());
+	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_putHolder.spawn(req.put(url), [&](web::WebResponse res) {
 		callback(res);
@@ -43,7 +40,7 @@ void PvpClient::postDeathCount(int matchID, std::string const& count, Callback c
 	web::WebRequest req;
 	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?count=" + count;
 
-	req.header("Authorization", "Bearer " + getToken());
+	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
 		callback(res);
@@ -73,7 +70,7 @@ void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, Callba
 		}
 	}
 
-	req.header("Authorization", "Bearer " + getToken());
+	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
@@ -85,7 +82,7 @@ void PvpClient::postMessage(int matchID, std::string const& content, Callback ca
 	auto body = matjson::Value::object();
 	body["content"] = content;
 	req.bodyJSON(body);
-	req.header("Authorization", "Bearer " + getToken());
+	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
 

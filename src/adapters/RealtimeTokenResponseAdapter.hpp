@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dtos/RealtimeTokenResponseDto.hpp"
+#include "../dtos/pvp/RealtimeTokenResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {

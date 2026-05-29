@@ -1,13 +1,13 @@
 #include "PvpOverlayService.hpp"
 
-#include "AuthService.hpp"
+#include "../auth/AuthService.hpp"
 #include "PvpSubmitterService.hpp"
-#include "../adapters/ActivePvpMatchResponseAdapter.hpp"
-#include "../adapters/RealtimeTokenResponseAdapter.hpp"
-#include "../clients/AuthClient.hpp"
-#include "../clients/LevelClient.hpp"
-#include "../clients/PvpClient.hpp"
-#include "../common.hpp"
+#include "../../adapters/ActivePvpMatchResponseAdapter.hpp"
+#include "../../adapters/RealtimeTokenResponseAdapter.hpp"
+#include "../../clients/auth/AuthClient.hpp"
+#include "../../clients/level/LevelClient.hpp"
+#include "../../clients/pvp/PvpClient.hpp"
+#include "../../common.hpp"
 
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/Notification.hpp>

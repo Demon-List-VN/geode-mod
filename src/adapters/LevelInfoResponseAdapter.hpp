@@ -1,7 +1,7 @@
 #pragma once
 
 #include "LevelListAdapter.hpp"
-#include "../dtos/LevelInfoResponseDto.hpp"
+#include "../dtos/level/LevelInfoResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {

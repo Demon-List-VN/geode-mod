@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include "../dtos/LevelListDto.hpp"
+#include "../dtos/level/LevelListDto.hpp"
 
 namespace gdvn::level_info {
 

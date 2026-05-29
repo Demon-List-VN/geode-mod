@@ -1,7 +1,7 @@
 #include "LevelService.hpp"
 
-#include "../adapters/LevelInfoResponseAdapter.hpp"
-#include "../clients/LevelClient.hpp"
+#include "../../adapters/LevelInfoResponseAdapter.hpp"
+#include "../../clients/level/LevelClient.hpp"
 
 void LevelService::getLevel(int id, GetLevelCallback callback) {
 	LevelClient::getLevel(id, [&](web::WebResponse& res) {

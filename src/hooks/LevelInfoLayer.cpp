@@ -1,8 +1,8 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp> // DO NOT REMOVE
-#include "../services/AuthService.hpp"
-#include "../services/LevelService.hpp"
+#include "../services/auth/AuthService.hpp"
+#include "../services/level/LevelService.hpp"
 #include "../utils/LevelInfoLayerUtils.hpp"
 
 using namespace geode::prelude;

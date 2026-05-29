@@ -7,9 +7,10 @@
 
 using namespace geode::prelude;
 
-class EventClient {
+class PvpProgressClient {
 public:
 	using Callback = std::function<void(web::WebResponse&)>;
 
-	static void putLevel(int levelID, float progress, Callback callback);
+	static void postHeatmap(size_t count, Callback callback);
+	static void postDeathCount(int levelID, std::string const& count, bool completed, Callback callback);
 };

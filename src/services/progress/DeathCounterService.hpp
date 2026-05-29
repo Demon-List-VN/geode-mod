@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utils/DeathData.hpp"
+#include "../../utils/DeathData.hpp"
 #include <Geode/Geode.hpp>
 
 using namespace geode::prelude;

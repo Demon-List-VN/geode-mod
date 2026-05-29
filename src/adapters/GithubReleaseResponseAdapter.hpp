@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dtos/GithubReleaseResponseDto.hpp"
+#include "../dtos/github/GithubReleaseResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {

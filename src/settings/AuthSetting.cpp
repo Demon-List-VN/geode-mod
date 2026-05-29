@@ -5,8 +5,8 @@
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/FLAlertLayer.hpp>
 
-#include "../services/AuthService.hpp"
-#include "../services/VersionCheckerService.hpp"
+#include "../services/auth/AuthService.hpp"
+#include "../services/update/VersionCheckerService.hpp"
 
 using namespace geode::prelude;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dtos/ActivePvpMatchResponseDto.hpp"
+#include "../dtos/pvp/ActivePvpMatchResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {

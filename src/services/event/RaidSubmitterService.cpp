@@ -1,9 +1,8 @@
 #include "RaidSubmitterService.hpp"
 #include <Geode/Geode.hpp>
 
-#include "AuthService.hpp"
-#include "../clients/EventClient.hpp"
-#include "../clients/LevelClient.hpp"
+#include "../auth/AuthService.hpp"
+#include "../../clients/event/EventClient.hpp"
 
 RaidSubmitterService::RaidSubmitterService() : m_state(std::make_shared<State>()) {}
 
@@ -11,7 +10,7 @@ RaidSubmitterService::~RaidSubmitterService() = default;
 
 RaidSubmitterService::RaidSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	std::weak_ptr<State> state = m_state;
-	LevelClient::getEventLevel(levelID, "raid", [&](web::WebResponse& res) {
+	EventClient::getEventLevel(levelID, "raid", [&](web::WebResponse& res) {
 		if (auto locked = state.lock()) {
 			locked->inEvent.store(res.ok());
 		}

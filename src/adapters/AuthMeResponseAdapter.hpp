@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dtos/AuthMeResponseDto.hpp"
+#include "../dtos/auth/AuthMeResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {

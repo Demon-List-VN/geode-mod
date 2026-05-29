@@ -1,7 +1,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include "../services/VersionCheckerService.hpp"
-#include "../services/AuthService.hpp"
+#include "../services/update/VersionCheckerService.hpp"
+#include "../services/auth/AuthService.hpp"
 
 using namespace geode::prelude;
 
