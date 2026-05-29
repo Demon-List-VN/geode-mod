@@ -84,7 +84,7 @@ void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, GetMes
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::PvpMessagesResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = PvpMessagesResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 
@@ -107,7 +107,7 @@ void PvpClient::postMessage(int matchID, std::string const& content, PostMessage
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::PvpMessageAdapter::fromJson(jsonResult.unwrap());
+                dto = PvpMessageAdapter::fromJson(jsonResult.unwrap());
             }
         }
 

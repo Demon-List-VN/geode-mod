@@ -3,8 +3,6 @@
 #include "../dtos/auth/OtpGrantResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class OtpGrantResponseAdapter {
   public:
     static OtpGrantResponseDto fromJson(matjson::Value const& json) {
@@ -26,4 +24,3 @@ class OtpGrantResponseAdapter {
     }
 };
 
-} // namespace gdvn::adapters

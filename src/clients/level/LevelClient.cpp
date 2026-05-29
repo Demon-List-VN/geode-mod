@@ -25,7 +25,7 @@ void LevelClient::getLevel(int id, GetLevelCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::LevelInfoResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = LevelInfoResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 
@@ -45,7 +45,7 @@ void LevelClient::getActivePvpMatch(int levelID, GetActivePvpMatchCallback callb
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::ActivePvpMatchResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = ActivePvpMatchResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 

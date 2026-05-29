@@ -28,7 +28,7 @@ void UpdateClient::getLatestRelease(GetLatestReleaseCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::GithubReleaseResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = GithubReleaseResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 

@@ -21,7 +21,7 @@ void AuthClient::postOTP(PostOTPCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::OtpResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = OtpResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 
@@ -39,7 +39,7 @@ void AuthClient::getOTP(std::string const& code, GetOTPCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::OtpGrantResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = OtpGrantResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 
@@ -72,7 +72,7 @@ void AuthClient::getMe(GetMeCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::AuthMeResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = AuthMeResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 
@@ -92,7 +92,7 @@ void AuthClient::getRealtimeToken(GetRealtimeTokenCallback callback) {
         if (res.ok()) {
             auto jsonResult = res.json();
             if (jsonResult) {
-                dto = gdvn::adapters::RealtimeTokenResponseAdapter::fromJson(jsonResult.unwrap());
+                dto = RealtimeTokenResponseAdapter::fromJson(jsonResult.unwrap());
             }
         }
 

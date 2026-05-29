@@ -4,8 +4,6 @@
 #include "LevelListItemAdapter.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class LevelListAdapter {
   public:
     static LevelListDto fromJson(matjson::Value const& json) {
@@ -45,4 +43,3 @@ class LevelListAdapter {
     }
 };
 
-} // namespace gdvn::adapters

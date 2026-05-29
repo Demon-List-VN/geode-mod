@@ -3,8 +3,6 @@
 #include "../dtos/pvp/RealtimeTokenResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class RealtimeTokenResponseAdapter {
   public:
     static RealtimeTokenResponseDto fromJson(matjson::Value const& json) {
@@ -31,4 +29,3 @@ class RealtimeTokenResponseAdapter {
     }
 };
 
-} // namespace gdvn::adapters

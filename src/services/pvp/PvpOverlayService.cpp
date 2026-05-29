@@ -851,7 +851,7 @@ void PvpOverlayService::handleRealtimeMessage(matjson::Value const& json) {
         } else if (table == "pvpMatchMessages") {
             log::info("Versus realtime chat event received: match={}, id={}", getInteger(row, "matchId"),
                       getInteger(row, "id"));
-            this->handleMessageRow(gdvn::adapters::PvpMessageAdapter::fromJson(row), true);
+            this->handleMessageRow(PvpMessageAdapter::fromJson(row), true);
             this->scheduleMessageRefresh();
         }
     }

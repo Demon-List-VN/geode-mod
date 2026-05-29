@@ -3,8 +3,6 @@
 #include "../dtos/github/GithubReleaseResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class GithubReleaseResponseAdapter {
   public:
     static GithubReleaseResponseDto fromJson(matjson::Value const& json) {
@@ -19,4 +17,3 @@ class GithubReleaseResponseAdapter {
     }
 };
 
-} // namespace gdvn::adapters

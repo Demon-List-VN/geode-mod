@@ -3,8 +3,6 @@
 #include "../dtos/pvp/PvpMessageDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class PvpMessageAdapter {
   public:
     static PvpMessageDto fromJson(matjson::Value const& json) {
@@ -36,4 +34,3 @@ class PvpMessageAdapter {
     }
 };
 
-} // namespace gdvn::adapters

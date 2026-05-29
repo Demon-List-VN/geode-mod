@@ -3,8 +3,6 @@
 #include "../dtos/level/LevelListItemDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class LevelListItemAdapter {
   public:
     static LevelListItemDto fromJson(matjson::Value const& json) {
@@ -22,4 +20,3 @@ class LevelListItemAdapter {
     }
 };
 
-} // namespace gdvn::adapters

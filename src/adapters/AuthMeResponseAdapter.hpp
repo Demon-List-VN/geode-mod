@@ -3,8 +3,6 @@
 #include "../dtos/auth/AuthMeResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class AuthMeResponseAdapter {
   public:
     static AuthMeResponseDto fromJson(matjson::Value const& json) {
@@ -19,4 +17,3 @@ class AuthMeResponseAdapter {
     }
 };
 
-} // namespace gdvn::adapters

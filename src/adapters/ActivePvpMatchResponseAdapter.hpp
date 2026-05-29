@@ -3,8 +3,6 @@
 #include "../dtos/pvp/ActivePvpMatchResponseDto.hpp"
 #include <Geode/Geode.hpp>
 
-namespace gdvn::adapters {
-
 class ActivePvpMatchResponseAdapter {
   public:
     static ActivePvpMatchResponseDto fromJson(matjson::Value const& json) {
@@ -24,4 +22,3 @@ class ActivePvpMatchResponseAdapter {
     }
 };
 
-} // namespace gdvn::adapters
