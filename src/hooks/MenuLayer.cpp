@@ -1,31 +1,31 @@
+#include "../services/auth/AuthService.hpp"
+#include "../services/update/VersionCheckerService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include "../services/update/VersionCheckerService.hpp"
-#include "../services/auth/AuthService.hpp"
 
 using namespace geode::prelude;
 
 class $modify(MenuLayer) {
-	bool init() {
-		if (!MenuLayer::init()) {
-			return false;
-		}
+    bool init() {
+        if (!MenuLayer::init()) {
+            return false;
+        }
 
-	    bool loginShown = Mod::get()->getSavedValue<bool>("login-shown", false);
+        bool loginShown = Mod::get()->getSavedValue<bool>("login-shown", false);
 
-	    if (!loginShown && !AuthService::isLoggedIn()) {
-	        Mod::get()->setSavedValue<bool>("login-shown", true);
+        if (!loginShown && !AuthService::isLoggedIn()) {
+            Mod::get()->setSavedValue<bool>("login-shown", true);
             AuthService::login();
-	    }
+        }
 
-	    static bool hasChecked = false;
+        static bool hasChecked = false;
 
-		if (!hasChecked) {
-			hasChecked = true;
-			VersionCheckerService::checkForUpdate();
-		    AuthService::check();
-		}
+        if (!hasChecked) {
+            hasChecked = true;
+            VersionCheckerService::checkForUpdate();
+            AuthService::check();
+        }
 
-		return true;
-	}
+        return true;
+    }
 };

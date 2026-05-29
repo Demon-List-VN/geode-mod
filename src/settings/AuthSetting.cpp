@@ -1,5 +1,5 @@
-#include <Geode/loader/SettingV3.hpp>
 #include <Geode/loader/Mod.hpp>
+#include <Geode/loader/SettingV3.hpp>
 
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
@@ -11,8 +11,9 @@
 using namespace geode::prelude;
 
 class LoginButtonSetitngV3 : public SettingV3 {
-public:
-    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
+  public:
+    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID,
+                                                    matjson::Value const& json) {
         auto res = std::make_shared<LoginButtonSetitngV3>();
         auto root = checkJson(json, "MyButtonSettingV3");
 
@@ -36,13 +37,14 @@ public:
         return true;
     }
 
-    void reset() override {}
+    void reset() override {
+    }
 
     SettingNodeV3* createNode(float width) override;
 };
 
 class LoginButtonSettingNodeV3 : public SettingNodeV3 {
-protected:
+  protected:
     ButtonSprite* m_buttonSprite;
     CCMenuItemSpriteExtra* m_button;
 
@@ -64,13 +66,12 @@ protected:
             return false;
         }
 
-        m_buttonSprite = !AuthService::isLoggedIn() ?
-            ButtonSprite::create("Login", "goldFont.fnt", "GJ_button_01.png", .8f) :
-            ButtonSprite::create("Logout", "goldFont.fnt", "GJ_button_06.png", .8f);
+        m_buttonSprite = !AuthService::isLoggedIn()
+                             ? ButtonSprite::create("Login", "goldFont.fnt", "GJ_button_01.png", .8f)
+                             : ButtonSprite::create("Logout", "goldFont.fnt", "GJ_button_06.png", .8f);
         m_buttonSprite->setScale(.5f);
-        m_button = CCMenuItemSpriteExtra::create(
-            m_buttonSprite, this, menu_selector(LoginButtonSettingNodeV3::onButton)
-        );
+        m_button =
+            CCMenuItemSpriteExtra::create(m_buttonSprite, this, menu_selector(LoginButtonSettingNodeV3::onButton));
 
         this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
         this->getButtonMenu()->setContentWidth(60);
@@ -103,10 +104,12 @@ protected:
         AuthService::login();
     }
 
-    void onCommit() override {}
-    void onResetToDefault() override {}
+    void onCommit() override {
+    }
+    void onResetToDefault() override {
+    }
 
-public:
+  public:
     static LoginButtonSettingNodeV3* create(std::shared_ptr<LoginButtonSetitngV3> setting, float width) {
         auto ret = new LoginButtonSettingNodeV3();
         if (ret->init(setting, width)) {
@@ -131,10 +134,7 @@ public:
 };
 
 SettingNodeV3* LoginButtonSetitngV3::createNode(float width) {
-    return LoginButtonSettingNodeV3::create(
-        std::static_pointer_cast<LoginButtonSetitngV3>(shared_from_this()),
-        width
-    );
+    return LoginButtonSettingNodeV3::create(std::static_pointer_cast<LoginButtonSetitngV3>(shared_from_this()), width);
 }
 
 $execute {
@@ -142,8 +142,9 @@ $execute {
 }
 
 class UpdateButtonSetitngV3 : public SettingV3 {
-public:
-    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
+  public:
+    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID,
+                                                    matjson::Value const& json) {
         auto res = std::make_shared<UpdateButtonSetitngV3>();
         auto root = checkJson(json, "UpdateButtonSettingV3");
 
@@ -167,13 +168,14 @@ public:
         return true;
     }
 
-    void reset() override {}
+    void reset() override {
+    }
 
     SettingNodeV3* createNode(float width) override;
 };
 
 class UpdateButtonSettingNodeV3 : public SettingNodeV3 {
-protected:
+  protected:
     ButtonSprite* m_buttonSprite;
     CCMenuItemSpriteExtra* m_button;
 
@@ -184,9 +186,8 @@ protected:
 
         m_buttonSprite = ButtonSprite::create("Check", "goldFont.fnt", "GJ_button_01.png", .8f);
         m_buttonSprite->setScale(.5f);
-        m_button = CCMenuItemSpriteExtra::create(
-            m_buttonSprite, this, menu_selector(UpdateButtonSettingNodeV3::onButton)
-        );
+        m_button =
+            CCMenuItemSpriteExtra::create(m_buttonSprite, this, menu_selector(UpdateButtonSettingNodeV3::onButton));
 
         this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
         this->getButtonMenu()->setContentWidth(60);
@@ -212,10 +213,12 @@ protected:
         VersionCheckerService::checkForUpdate(true);
     }
 
-    void onCommit() override {}
-    void onResetToDefault() override {}
+    void onCommit() override {
+    }
+    void onResetToDefault() override {
+    }
 
-public:
+  public:
     static UpdateButtonSettingNodeV3* create(std::shared_ptr<UpdateButtonSetitngV3> setting, float width) {
         auto ret = new UpdateButtonSettingNodeV3();
         if (ret->init(setting, width)) {
@@ -240,10 +243,8 @@ public:
 };
 
 SettingNodeV3* UpdateButtonSetitngV3::createNode(float width) {
-    return UpdateButtonSettingNodeV3::create(
-        std::static_pointer_cast<UpdateButtonSetitngV3>(shared_from_this()),
-        width
-    );
+    return UpdateButtonSettingNodeV3::create(std::static_pointer_cast<UpdateButtonSetitngV3>(shared_from_this()),
+                                             width);
 }
 
 $execute {

@@ -3,7 +3,6 @@
 #include <string>
 
 struct AuthMeResponseDto {
-	bool valid = false;
-	std::string name;
+    bool valid = false;
+    std::string name;
 };
-

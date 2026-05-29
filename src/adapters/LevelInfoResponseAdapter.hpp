@@ -1,30 +1,30 @@
 #pragma once
 
-#include "LevelListAdapter.hpp"
 #include "../dtos/level/LevelInfoResponseDto.hpp"
+#include "LevelListAdapter.hpp"
 #include <Geode/Geode.hpp>
 
 namespace gdvn::adapters {
 
 class LevelInfoResponseAdapter {
-public:
-	static LevelInfoResponseDto fromJson(matjson::Value const& json) {
-		LevelInfoResponseDto dto;
+  public:
+    static LevelInfoResponseDto fromJson(matjson::Value const& json) {
+        LevelInfoResponseDto dto;
 
-		if (!json.isArray()) {
-			return dto;
-		}
+        if (!json.isArray()) {
+            return dto;
+        }
 
-		dto.valid = true;
+        dto.valid = true;
 
-		for (auto const& item : json.asArray().unwrap()) {
-			if (item.isObject()) {
-				dto.lists.push_back(LevelListAdapter::fromJson(item));
-			}
-		}
+        for (auto const& item : json.asArray().unwrap()) {
+            if (item.isObject()) {
+                dto.lists.push_back(LevelListAdapter::fromJson(item));
+            }
+        }
 
-		return dto;
-	}
+        return dto;
+    }
 };
 
-}
+} // namespace gdvn::adapters

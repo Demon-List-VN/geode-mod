@@ -6,14 +6,15 @@
 using namespace geode::prelude;
 
 class DeathCounterService {
-private:
-	DeathData deathData;
+  private:
+    DeathData deathData;
     bool completed = false;
-public:
-	DeathCounterService();
-	DeathCounterService(int id, bool completed);
-	void add(int percent);
-	void submit();
+
+  public:
+    DeathCounterService();
+    DeathCounterService(int id, bool completed);
+    void add(int percent);
+    void submit();
     void setCompleted(bool completed) {
         this->completed = completed;
     }

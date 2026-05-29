@@ -18,9 +18,8 @@ class $modify(GDVNCreatorLayer, CreatorLayer) {
             return true;
         }
 
-        btn->setSprite(
-            CCSprite::createWithSpriteFrameName("GJ_versusBtn_001.png"));
-		btn->setScale(0.8f);
+        btn->setSprite(CCSprite::createWithSpriteFrameName("GJ_versusBtn_001.png"));
+        btn->setScale(0.8f);
 
         return true;
     }

@@ -1,11 +1,11 @@
 #pragma once
 
+#include "../../dtos/pvp/PvpMessageDto.hpp"
+#include "../../dtos/pvp/PvpMessagesResponseDto.hpp"
+#include "PvpRealtimeSocketService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/PlayLayer.hpp>
-#include "PvpRealtimeSocketService.hpp"
-#include "../../dtos/pvp/PvpMessageDto.hpp"
-#include "../../dtos/pvp/PvpMessagesResponseDto.hpp"
 
 #include <cstdint>
 #include <string>
@@ -17,122 +17,122 @@ class PvpChatPopupService;
 class PvpSubmitterService;
 
 class PvpOverlayService final : public PvpRealtimeSocketDelegateService {
-public:
-	explicit PvpOverlayService(PlayLayer* layer, int levelID, PvpSubmitterService* submitter = nullptr);
-	~PvpOverlayService() override;
+  public:
+    explicit PvpOverlayService(PlayLayer* layer, int levelID, PvpSubmitterService* submitter = nullptr);
+    ~PvpOverlayService() override;
 
-	static PvpOverlayService* getActive();
+    static PvpOverlayService* getActive();
 
-	void update(float dt);
-	void cleanup();
-	bool openChat();
-	bool hasPvpMatch() const;
-	bool isChatUsable() const;
-	bool isChatMuted() const;
-	void setChatMuted(bool muted);
-	void submitChatMessage(std::string content);
-	void notifyChatPopupClosed(PvpChatPopupService* popup);
-	std::string getChatHistoryText() const;
-	std::vector<std::string> getChatHistoryLines() const;
+    void update(float dt);
+    void cleanup();
+    bool openChat();
+    bool hasPvpMatch() const;
+    bool isChatUsable() const;
+    bool isChatMuted() const;
+    void setChatMuted(bool muted);
+    void submitChatMessage(std::string content);
+    void notifyChatPopupClosed(PvpChatPopupService* popup);
+    std::string getChatHistoryText() const;
+    std::vector<std::string> getChatHistoryLines() const;
 
-	void onRealtimeOpen() override;
-	void onRealtimeMessage(std::string const& message) override;
-	void onRealtimeClose() override;
+    void onRealtimeOpen() override;
+    void onRealtimeMessage(std::string const& message) override;
+    void onRealtimeClose() override;
 
-private:
-	struct PlayerProgress {
-		std::string uid;
-		float progress = 0.0f;
-		std::string playMode = "normal";
-	};
+  private:
+    struct PlayerProgress {
+        std::string uid;
+        float progress = 0.0f;
+        std::string playMode = "normal";
+    };
 
-	struct ChatMessage {
-		std::int64_t id = 0;
-		std::string senderUid;
-		std::string type;
-		std::string content;
-		bool senderAnonymous = false;
-	};
+    struct ChatMessage {
+        std::int64_t id = 0;
+        std::string senderUid;
+        std::string type;
+        std::string content;
+        bool senderAnonymous = false;
+    };
 
-	struct RecentChatMessage {
-		std::int64_t id = 0;
-		float timeLeft = 0.0f;
-		CCLabelBMFont* label = nullptr;
-	};
+    struct RecentChatMessage {
+        std::int64_t id = 0;
+        float timeLeft = 0.0f;
+        CCLabelBMFont* label = nullptr;
+    };
 
-	PlayLayer* m_layer = nullptr;
-	CCLabelBMFont* m_label = nullptr;
-	CCNode* m_chatStack = nullptr;
-	PvpChatPopupService* m_chatPopup = nullptr;
-	PvpSubmitterService* m_submitter = nullptr;
-	std::shared_ptr<PvpRealtimeSocketService> m_socket;
+    PlayLayer* m_layer = nullptr;
+    CCLabelBMFont* m_label = nullptr;
+    CCNode* m_chatStack = nullptr;
+    PvpChatPopupService* m_chatPopup = nullptr;
+    PvpSubmitterService* m_submitter = nullptr;
+    std::shared_ptr<PvpRealtimeSocketService> m_socket;
 
-	int m_levelID = 0;
-	int m_matchID = 0;
-	int m_ref = 1;
-	int m_reconnectAttempts = 0;
-	float m_heartbeatTimer = 0.0f;
-	float m_reconnectTimer = -1.0f;
-	float m_messageRefreshTimer = -1.0f;
-	float m_chatGraceTimer = -1.0f;
-	bool m_active = false;
-	bool m_chatOpen = false;
-	bool m_chatMuted = false;
-	bool m_chatSending = false;
-	bool m_cleanedUp = false;
-	bool m_connecting = false;
-	bool m_joined = false;
-	bool m_requestingRealtimeToken = false;
+    int m_levelID = 0;
+    int m_matchID = 0;
+    int m_ref = 1;
+    int m_reconnectAttempts = 0;
+    float m_heartbeatTimer = 0.0f;
+    float m_reconnectTimer = -1.0f;
+    float m_messageRefreshTimer = -1.0f;
+    float m_chatGraceTimer = -1.0f;
+    bool m_active = false;
+    bool m_chatOpen = false;
+    bool m_chatMuted = false;
+    bool m_chatSending = false;
+    bool m_cleanedUp = false;
+    bool m_connecting = false;
+    bool m_joined = false;
+    bool m_requestingRealtimeToken = false;
 
-	std::int64_t m_latestMessageID = 0;
-	std::int64_t m_realtimeTokenExpiresAt = 0;
-	std::int64_t m_matchEndsAtEpoch = 0;
-	std::int64_t m_lastCountdownSeconds = -1;
-	std::string m_currentUid;
-	std::string m_supabaseUrl;
-	std::string m_anonKey;
-	std::string m_realtimeAccessToken;
-	std::string m_topic;
-	std::string m_mode = "classic";
-	PlayerProgress m_self;
-	PlayerProgress m_opponent;
-	std::vector<ChatMessage> m_chatMessages;
-	std::vector<RecentChatMessage> m_recentMessages;
+    std::int64_t m_latestMessageID = 0;
+    std::int64_t m_realtimeTokenExpiresAt = 0;
+    std::int64_t m_matchEndsAtEpoch = 0;
+    std::int64_t m_lastCountdownSeconds = -1;
+    std::string m_currentUid;
+    std::string m_supabaseUrl;
+    std::string m_anonKey;
+    std::string m_realtimeAccessToken;
+    std::string m_topic;
+    std::string m_mode = "classic";
+    PlayerProgress m_self;
+    PlayerProgress m_opponent;
+    std::vector<ChatMessage> m_chatMessages;
+    std::vector<RecentChatMessage> m_recentMessages;
 
-	void createLabel();
-	void createChatNodes();
-	void requestMatch();
-	void requestRealtimeToken();
-	void requestMessages(bool animateNew, bool incremental);
-	void connectRealtime();
-	void closeSocket();
-	void scheduleReconnect();
-	void scheduleMessageRefresh();
-	void sendJoin();
-	void sendHeartbeat();
-	void sendJson(matjson::Value const& json);
-	void handleRealtimeMessage(matjson::Value const& json);
-	void handleResultRow(matjson::Value const& row);
-	void handleMatchRow(matjson::Value const& row);
-	void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
-	void handleMessageRow(PvpMessageDto const& message, bool animateNew);
-	void handleSystemMetadata(matjson::Value const& metadata);
-	void parseMatchSnapshot(matjson::Value const& json);
-	std::string formatSystemMessage(matjson::Value const& metadata) const;
-	std::string formatPlayerLabel(std::string const& label, PlayerProgress const& player) const;
-	std::string getChatSenderLabel(ChatMessage const& message) const;
-	void pushRecentMessage(ChatMessage const& message);
-	void layoutRecentMessages();
-	void updateRecentMessages(float dt);
-	void refreshLabel();
-	void refreshChatVisibility();
-	void updateLabelPosition();
-	void updateChatPositions();
-	void setOverlayVisible(bool visible);
-	bool isReadyForRealtime() const;
-	bool isActiveStatus(std::string const& status) const;
-	bool isCompletedStatus(std::string const& status) const;
-	bool isPlatformerMode() const;
-	std::string formatProgressLabel(float progress) const;
-	std::string nextRef();
+    void createLabel();
+    void createChatNodes();
+    void requestMatch();
+    void requestRealtimeToken();
+    void requestMessages(bool animateNew, bool incremental);
+    void connectRealtime();
+    void closeSocket();
+    void scheduleReconnect();
+    void scheduleMessageRefresh();
+    void sendJoin();
+    void sendHeartbeat();
+    void sendJson(matjson::Value const& json);
+    void handleRealtimeMessage(matjson::Value const& json);
+    void handleResultRow(matjson::Value const& row);
+    void handleMatchRow(matjson::Value const& row);
+    void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
+    void handleMessageRow(PvpMessageDto const& message, bool animateNew);
+    void handleSystemMetadata(matjson::Value const& metadata);
+    void parseMatchSnapshot(matjson::Value const& json);
+    std::string formatSystemMessage(matjson::Value const& metadata) const;
+    std::string formatPlayerLabel(std::string const& label, PlayerProgress const& player) const;
+    std::string getChatSenderLabel(ChatMessage const& message) const;
+    void pushRecentMessage(ChatMessage const& message);
+    void layoutRecentMessages();
+    void updateRecentMessages(float dt);
+    void refreshLabel();
+    void refreshChatVisibility();
+    void updateLabelPosition();
+    void updateChatPositions();
+    void setOverlayVisible(bool visible);
+    bool isReadyForRealtime() const;
+    bool isActiveStatus(std::string const& status) const;
+    bool isCompletedStatus(std::string const& status) const;
+    bool isPlatformerMode() const;
+    std::string formatProgressLabel(float progress) const;
+    std::string nextRef();
 };

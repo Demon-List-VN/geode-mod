@@ -5,9 +5,10 @@
 using namespace geode::prelude;
 
 class AttemptCounterService {
-private:
-	size_t cnt = 0;
-public:
-	void add();
-	void submit();
+  private:
+    size_t cnt = 0;
+
+  public:
+    void add();
+    void submit();
 };

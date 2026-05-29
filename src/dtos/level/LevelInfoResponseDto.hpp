@@ -4,7 +4,6 @@
 #include <vector>
 
 struct LevelInfoResponseDto {
-	bool valid = false;
-	std::vector<LevelListDto> lists;
+    bool valid = false;
+    std::vector<LevelListDto> lists;
 };
-

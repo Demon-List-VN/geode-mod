@@ -5,7 +5,8 @@
 using namespace geode::prelude;
 
 class VersionCheckerService {
-	static void downloadUpdate();
-public:
-	static void checkForUpdate(bool notifyIfCurrent = false);
+    static void downloadUpdate();
+
+  public:
+    static void checkForUpdate(bool notifyIfCurrent = false);
 };

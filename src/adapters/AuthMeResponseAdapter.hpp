@@ -6,17 +6,17 @@
 namespace gdvn::adapters {
 
 class AuthMeResponseAdapter {
-public:
-	static AuthMeResponseDto fromJson(matjson::Value const& json) {
-		AuthMeResponseDto dto;
+  public:
+    static AuthMeResponseDto fromJson(matjson::Value const& json) {
+        AuthMeResponseDto dto;
 
-		if (json["name"].isString()) {
-			dto.valid = true;
-			dto.name = json["name"].asString().unwrapOrDefault();
-		}
+        if (json["name"].isString()) {
+            dto.valid = true;
+            dto.name = json["name"].asString().unwrapOrDefault();
+        }
 
-		return dto;
-	}
+        return dto;
+    }
 };
 
-}
+} // namespace gdvn::adapters

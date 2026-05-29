@@ -10,106 +10,107 @@ namespace {
 async::TaskHolder<web::WebResponse> s_putHolder;
 async::TaskHolder<web::WebResponse> s_postHolder;
 async::TaskHolder<web::WebResponse> s_getHolder;
-}
+} // namespace
 
 void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback callback) {
-	web::WebRequest req;
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/play-mode?playMode=" + playMode;
+    web::WebRequest req;
+    std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/play-mode?playMode=" + playMode;
 
-	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
+    req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
-		EmptyResponseDto dto;
-		callback(dto, res);
-	});
+    s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
+        EmptyResponseDto dto;
+        callback(dto, res);
+    });
 }
 
 void PvpClient::putProgress(int matchID, float progress, bool completed, Callback callback) {
-	web::WebRequest req;
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress?progress=" + std::to_string(progress);
+    web::WebRequest req;
+    std::string url =
+        API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress?progress=" + std::to_string(progress);
 
-	if (completed) {
-		url += "&completed=true";
-	}
+    if (completed) {
+        url += "&completed=true";
+    }
 
-	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
+    req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
-		EmptyResponseDto dto;
-		callback(dto, res);
-	});
+    s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
+        EmptyResponseDto dto;
+        callback(dto, res);
+    });
 }
 
 void PvpClient::postDeathCount(int matchID, std::string const& count, Callback callback) {
-	web::WebRequest req;
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?count=" + count;
+    web::WebRequest req;
+    std::string url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?count=" + count;
 
-	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
+    req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
-		EmptyResponseDto dto;
-		callback(dto, res);
-	});
+    s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
+        EmptyResponseDto dto;
+        callback(dto, res);
+    });
 }
 
 void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, GetMessagesCallback callback) {
-	web::WebRequest req;
-	auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
-	std::vector<std::string> params;
+    web::WebRequest req;
+    auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
+    std::vector<std::string> params;
 
-	if (afterID > 0) {
-		params.push_back("afterId=" + std::to_string(afterID));
-	}
+    if (afterID > 0) {
+        params.push_back("afterId=" + std::to_string(afterID));
+    }
 
-	if (limit > 0) {
-		params.push_back("limit=" + std::to_string(limit));
-	}
+    if (limit > 0) {
+        params.push_back("limit=" + std::to_string(limit));
+    }
 
-	if (!params.empty()) {
-		url += "?";
-		for (size_t i = 0; i < params.size(); ++i) {
-			if (i > 0) {
-				url += "&";
-			}
-			url += params[i];
-		}
-	}
+    if (!params.empty()) {
+        url += "?";
+        for (size_t i = 0; i < params.size(); ++i) {
+            if (i > 0) {
+                url += "&";
+            }
+            url += params[i];
+        }
+    }
 
-	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
+    req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
-		PvpMessagesResponseDto dto;
+    s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
+        PvpMessagesResponseDto dto;
 
-		if (res.ok()) {
-			auto jsonResult = res.json();
-			if (jsonResult) {
-				dto = gdvn::adapters::PvpMessagesResponseAdapter::fromJson(jsonResult.unwrap());
-			}
-		}
+        if (res.ok()) {
+            auto jsonResult = res.json();
+            if (jsonResult) {
+                dto = gdvn::adapters::PvpMessagesResponseAdapter::fromJson(jsonResult.unwrap());
+            }
+        }
 
-		callback(dto, res);
-	});
+        callback(dto, res);
+    });
 }
 
 void PvpClient::postMessage(int matchID, std::string const& content, PostMessageCallback callback) {
-	web::WebRequest req;
-	auto body = matjson::Value::object();
-	body["content"] = content;
-	req.bodyJSON(body);
-	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
+    web::WebRequest req;
+    auto body = matjson::Value::object();
+    body["content"] = content;
+    req.bodyJSON(body);
+    req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
+    auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
 
-	s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
-		PvpMessageDto dto;
+    s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
+        PvpMessageDto dto;
 
-		if (res.ok()) {
-			auto jsonResult = res.json();
-			if (jsonResult) {
-				dto = gdvn::adapters::PvpMessageAdapter::fromJson(jsonResult.unwrap());
-			}
-		}
+        if (res.ok()) {
+            auto jsonResult = res.json();
+            if (jsonResult) {
+                dto = gdvn::adapters::PvpMessageAdapter::fromJson(jsonResult.unwrap());
+            }
+        }
 
-		callback(dto, res);
-	});
+        callback(dto, res);
+    });
 }

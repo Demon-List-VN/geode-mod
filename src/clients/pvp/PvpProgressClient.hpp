@@ -10,9 +10,9 @@
 using namespace geode::prelude;
 
 class PvpProgressClient {
-public:
-	using Callback = std::function<void(EmptyResponseDto const&, web::WebResponse&)>;
+  public:
+    using Callback = std::function<void(EmptyResponseDto const&, web::WebResponse&)>;
 
-	static void postHeatmap(size_t count, Callback callback);
-	static void postDeathCount(int levelID, std::string const& count, bool completed, Callback callback);
+    static void postHeatmap(size_t count, Callback callback);
+    static void postDeathCount(int levelID, std::string const& count, bool completed, Callback callback);
 };

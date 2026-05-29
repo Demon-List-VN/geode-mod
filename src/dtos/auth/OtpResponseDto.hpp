@@ -3,7 +3,6 @@
 #include <string>
 
 struct OtpResponseDto {
-	bool valid = false;
-	std::string code;
+    bool valid = false;
+    std::string code;
 };
-

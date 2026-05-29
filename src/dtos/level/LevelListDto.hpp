@@ -4,42 +4,41 @@
 #include <string>
 
 struct LevelListDto {
-	std::string slug;
-	std::string title;
-	std::string mode;
-	bool isOfficial = false;
-	bool starred = false;
-	bool hasStarred = false;
-	bool topEnabled = false;
-	bool hasTopEnabled = false;
-	LevelListItemDto item;
+    std::string slug;
+    std::string title;
+    std::string mode;
+    bool isOfficial = false;
+    bool starred = false;
+    bool hasStarred = false;
+    bool topEnabled = false;
+    bool hasTopEnabled = false;
+    LevelListItemDto item;
 
-	std::string label() const {
-		if (!slug.empty()) {
-			return slug;
-		}
+    std::string label() const {
+        if (!slug.empty()) {
+            return slug;
+        }
 
-		if (!title.empty()) {
-			return title;
-		}
+        if (!title.empty()) {
+            return title;
+        }
 
-		return "List";
-	}
+        return "List";
+    }
 
-	bool isStarredList() const {
-		if (hasStarred) {
-			return starred;
-		}
+    bool isStarredList() const {
+        if (hasStarred) {
+            return starred;
+        }
 
-		return !isOfficial;
-	}
+        return !isOfficial;
+    }
 
-	bool isTopMode() const {
-		if (hasTopEnabled) {
-			return topEnabled;
-		}
+    bool isTopMode() const {
+        if (hasTopEnabled) {
+            return topEnabled;
+        }
 
-		return mode == "top";
-	}
+        return mode == "top";
+    }
 };
-

@@ -11,10 +11,10 @@
 using namespace geode::prelude;
 
 class LevelClient {
-public:
-	using GetLevelCallback = std::function<void(LevelInfoResponseDto const&, web::WebResponse&)>;
-	using GetActivePvpMatchCallback = std::function<void(ActivePvpMatchResponseDto const&, web::WebResponse&)>;
+  public:
+    using GetLevelCallback = std::function<void(LevelInfoResponseDto const&, web::WebResponse&)>;
+    using GetActivePvpMatchCallback = std::function<void(ActivePvpMatchResponseDto const&, web::WebResponse&)>;
 
-	static void getLevel(int id, GetLevelCallback callback);
-	static void getActivePvpMatch(int levelID, GetActivePvpMatchCallback callback);
+    static void getLevel(int id, GetLevelCallback callback);
+    static void getActivePvpMatch(int levelID, GetActivePvpMatchCallback callback);
 };

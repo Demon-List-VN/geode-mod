@@ -7,20 +7,22 @@
 using namespace geode::prelude;
 
 class RaidSubmitterService {
-	struct State {
-		int levelID = 0;
-		float best = 0;
-		std::atomic<bool> inEvent{ false };
+    struct State {
+        int levelID = 0;
+        float best = 0;
+        std::atomic<bool> inEvent{false};
 
-		explicit State(int levelID = 0) : levelID(levelID) {}
-	};
+        explicit State(int levelID = 0) : levelID(levelID) {
+        }
+    };
 
-	std::shared_ptr<State> m_state;
+    std::shared_ptr<State> m_state;
 
-	void submit();
-public:
-	RaidSubmitterService();
-	~RaidSubmitterService();
-	RaidSubmitterService(int levelID);
-	void record(float progress);
+    void submit();
+
+  public:
+    RaidSubmitterService();
+    ~RaidSubmitterService();
+    RaidSubmitterService(int levelID);
+    void record(float progress);
 };

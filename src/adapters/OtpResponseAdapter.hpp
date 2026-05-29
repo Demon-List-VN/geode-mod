@@ -6,17 +6,17 @@
 namespace gdvn::adapters {
 
 class OtpResponseAdapter {
-public:
-	static OtpResponseDto fromJson(matjson::Value const& json) {
-		OtpResponseDto dto;
+  public:
+    static OtpResponseDto fromJson(matjson::Value const& json) {
+        OtpResponseDto dto;
 
-		if (json["code"].isString()) {
-			dto.valid = true;
-			dto.code = json["code"].asString().unwrapOrDefault();
-		}
+        if (json["code"].isString()) {
+            dto.valid = true;
+            dto.code = json["code"].asString().unwrapOrDefault();
+        }
 
-		return dto;
-	}
+        return dto;
+    }
 };
 
-}
+} // namespace gdvn::adapters

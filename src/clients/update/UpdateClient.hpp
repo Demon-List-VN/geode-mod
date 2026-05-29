@@ -10,10 +10,10 @@
 using namespace geode::prelude;
 
 class UpdateClient {
-public:
-	using Callback = std::function<void(EmptyResponseDto const&, web::WebResponse&)>;
-	using GetLatestReleaseCallback = std::function<void(GithubReleaseResponseDto const&, web::WebResponse&)>;
+  public:
+    using Callback = std::function<void(EmptyResponseDto const&, web::WebResponse&)>;
+    using GetLatestReleaseCallback = std::function<void(GithubReleaseResponseDto const&, web::WebResponse&)>;
 
-	static void getLatestDownload(Callback callback);
-	static void getLatestRelease(GetLatestReleaseCallback callback);
+    static void getLatestDownload(Callback callback);
+    static void getLatestRelease(GetLatestReleaseCallback callback);
 };

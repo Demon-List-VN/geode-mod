@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - '**'
+      - "**"
 
 permissions:
   contents: write
@@ -45,12 +45,12 @@ jobs:
         with:
           combine: true
           target: ${{ matrix.config.target }}
-          build-args: '--parallel 16'
+          build-args: "--parallel 16"
 
   package:
     name: Package builds
     runs-on: ubuntu-latest
-    needs: [ 'build' ]
+    needs: ["build"]
 
     steps:
       - uses: actions/checkout@v4

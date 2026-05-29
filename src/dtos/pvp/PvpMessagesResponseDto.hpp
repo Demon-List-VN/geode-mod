@@ -4,6 +4,6 @@
 #include <vector>
 
 struct PvpMessagesResponseDto {
-	bool valid = false;
-	std::vector<PvpMessageDto> messages;
+    bool valid = false;
+    std::vector<PvpMessageDto> messages;
 };
