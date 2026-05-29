@@ -4,7 +4,6 @@
 using namespace geode::prelude;
 
 namespace gdvn::level_info {
-namespace {
 
 std::string replaceAll(std::string text, std::string const& from, std::string const& to) {
 	size_t pos = 0;
@@ -81,7 +80,7 @@ std::string formatNumber(double number) {
 	return formatted;
 }
 
-std::string getListValue(gdvn::models::LevelListModel const& list) {
+std::string getListValue(LevelListDto const& list) {
 	if (!list.item.position && !list.item.rating) {
 		return "";
 	}
@@ -113,7 +112,6 @@ std::string getListValue(gdvn::models::LevelListModel const& list) {
 	return text;
 }
 
-}
 
 CCLabelBMFont* createLabel(GJGameLevel* level, std::string str, int order) {
 	int offset = (level->m_coins == 0) ? 17 : 4;
@@ -170,7 +168,7 @@ CCMenu* ButtonCreator::create(std::vector<std::string> labels, GJGameLevel* leve
 }
 
 std::vector<std::string> getListInfoLabels(
-	std::vector<gdvn::models::LevelListModel> const& lists,
+	std::vector<LevelListDto> const& lists,
 	bool isLoggedIn
 ) {
 	std::vector<std::string> officialLabels;

@@ -8,11 +8,9 @@
 using namespace geode::prelude;
 
 class ProgressClient {
-	static async::TaskHolder<web::WebResponse> m_post_holder;
-
 public:
 	using Callback = std::function<void(web::WebResponse&)>;
 
-	static void submitHeatmap(size_t count, std::string const& token, Callback callback);
-	static void submitDeathCount(int levelID, std::string const& count, bool completed, std::string const& token, Callback callback);
+	static void postHeatmap(size_t count, Callback callback);
+	static void postDeathCount(int levelID, std::string const& count, bool completed, Callback callback);
 };

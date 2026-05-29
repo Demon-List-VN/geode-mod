@@ -17,7 +17,5 @@ void DeathCounterService::add(int percent) {
 void DeathCounterService::submit() {
 	using namespace geode::prelude;
 
-	auto APIKey = AuthService::getToken();
-
-	ProgressClient::submitDeathCount(deathData.levelID, deathData.serialize(), completed, APIKey, [&](web::WebResponse& res) {});
+	ProgressClient::postDeathCount(deathData.levelID, deathData.serialize(), completed, [&](web::WebResponse& res) {});
 }

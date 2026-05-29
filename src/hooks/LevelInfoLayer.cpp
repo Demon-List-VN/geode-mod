@@ -32,7 +32,7 @@ class $modify(LevelInfoLayer) {
 			layer->retain();
 
 		    LevelService::getLevel(id, [&](
-				gdvn::models::LevelInfoResponseModel const& model,
+				LevelInfoResponseDto const& model,
 				web::WebResponse& res
 			) mutable {
 				auto cleanup = [&]() {

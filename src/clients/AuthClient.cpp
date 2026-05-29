@@ -2,56 +2,62 @@
 
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> AuthClient::m_post_holder;
-async::TaskHolder<web::WebResponse> AuthClient::m_get_holder;
+namespace {
+async::TaskHolder<web::WebResponse> s_postHolder;
+async::TaskHolder<web::WebResponse> s_getHolder;
+}
 
-void AuthClient::requestOTP(Callback callback) {
+static std::string getToken() {
+	return Mod::get()->getSavedValue<std::string>("api-key");
+}
+
+void AuthClient::postOTP(Callback callback) {
 	web::WebRequest req;
 
-	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.post(API_URL + "/auth/otp"), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void AuthClient::checkOTP(std::string const& code, Callback callback) {
+void AuthClient::getOTP(std::string const& code, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/otp/" + code;
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void AuthClient::logout(std::string const& token, Callback callback) {
+void AuthClient::deleteAPIKey(Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/APIKey";
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_post_holder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void AuthClient::checkMe(std::string const& token, std::string const& modVersion, Callback callback) {
+void AuthClient::getMe(Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/me";
 
-	req.header("Authorization", "Bearer " + token);
-	req.header("X-GDVN-Mod-Version", modVersion);
+	req.header("Authorization", "Bearer " + getToken());
+	req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void AuthClient::getRealtimeToken(std::string const& token, Callback callback) {
+void AuthClient::getRealtimeToken(Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/realtime-token";
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }

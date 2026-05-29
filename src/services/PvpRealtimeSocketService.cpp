@@ -18,7 +18,7 @@
 
 #include <atomic>
 
-namespace {
+namespace gdvn::pvp_realtime_socket_detail {
 void ensureIxNetSystem() {
 	static std::atomic_bool initialized = false;
 	bool expected = false;
@@ -180,6 +180,7 @@ private:
 	}
 };
 }
+using namespace gdvn::pvp_realtime_socket_detail;
 
 std::shared_ptr<PvpRealtimeSocketService> PvpRealtimeSocketService::create(PvpRealtimeSocketDelegateService* delegate) {
 	return std::make_shared<IxPvpRealtimeSocketService>(delegate);

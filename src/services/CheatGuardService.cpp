@@ -102,7 +102,7 @@ namespace eclipse::__internal__ {
 	}
 }
 
-namespace {
+namespace gdvn::cheat_guard_detail {
 	constexpr float FLOAT_EPSILON = 0.001f;
 	constexpr bool ENABLE_CONFIG_BASED_CHEAT_CHECKS = true;
 
@@ -167,19 +167,19 @@ namespace {
 			"noclip",
 		};
 
-		if (!disablesCheatsInUi) {
-			for (auto id : levelLoadModules) {
-				if (isQolModModuleEnabled(mod, id)) {
-					return true;
+			if (!disablesCheatsInUi) {
+				for (auto id : levelLoadModules) {
+					if (isQolModModuleEnabled(mod, id)) {
+						return true;
+					}
 				}
-			}
 
-			for (auto id : attemptModules) {
-				if (isQolModModuleEnabled(mod, id)) {
-					return true;
+				for (auto id : attemptModules) {
+					if (isQolModModuleEnabled(mod, id)) {
+						return true;
+					}
 				}
 			}
-		}
 
 		return false;
 	}
@@ -292,7 +292,9 @@ namespace {
 #endif
 	}
 
-}
+	}
+
+using namespace gdvn::cheat_guard_detail;
 
 bool CheatGuardService::isGameplayCheated() {
 	return CheatGuardService::getGameplayCheatReason().has_value();

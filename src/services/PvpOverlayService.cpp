@@ -2,11 +2,12 @@
 
 #include "AuthService.hpp"
 #include "PvpSubmitterService.hpp"
+#include "../adapters/ActivePvpMatchResponseAdapter.hpp"
+#include "../adapters/RealtimeTokenResponseAdapter.hpp"
 #include "../clients/AuthClient.hpp"
 #include "../clients/LevelClient.hpp"
 #include "../clients/PvpClient.hpp"
 #include "../common.hpp"
-#include "../models/PvpModels.hpp"
 
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/ui/Notification.hpp>
@@ -22,7 +23,7 @@
 
 using namespace geode::prelude;
 
-namespace {
+namespace gdvn::pvp_overlay_detail {
 constexpr float HEARTBEAT_INTERVAL = 25.0f;
 constexpr float LABEL_MARGIN = 8.0f;
 constexpr float CHAT_MARGIN = 8.0f;
@@ -266,6 +267,7 @@ matjson::Value const& realtimeRecord(matjson::Value const& payload) {
 	return payload;
 }
 }
+using namespace gdvn::pvp_overlay_detail;
 
 class PvpChatPopupService final : public Popup, public TextInputDelegate {
 public:
@@ -590,7 +592,7 @@ void PvpOverlayService::requestMatch() {
 		return;
 	}
 
-	LevelClient::getActivePvpMatch(m_levelID, AuthService::getToken(), [&](web::WebResponse& res) {
+	LevelClient::getActivePvpMatch(m_levelID, [&](web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -606,7 +608,7 @@ void PvpOverlayService::requestMatch() {
 			return;
 		}
 
-		auto match = gdvn::models::ActivePvpMatchResponseModel::fromJson(jsonResult.unwrap());
+		auto match = gdvn::adapters::ActivePvpMatchResponseAdapter::fromJson(jsonResult.unwrap());
 		if (!match.valid) {
 			log::warn("Failed to map Versus overlay match snapshot");
 			return;
@@ -674,7 +676,7 @@ void PvpOverlayService::requestRealtimeToken() {
 
 	m_requestingRealtimeToken = true;
 
-	AuthClient::getRealtimeToken(AuthService::getToken(), [&](web::WebResponse& res) {
+	AuthClient::getRealtimeToken([&](web::WebResponse& res) {
 		m_requestingRealtimeToken = false;
 
 		if (m_cleanedUp) {
@@ -692,7 +694,7 @@ void PvpOverlayService::requestRealtimeToken() {
 			return;
 		}
 
-		auto token = gdvn::models::RealtimeTokenResponseModel::fromJson(jsonResult.unwrap());
+		auto token = gdvn::adapters::RealtimeTokenResponseAdapter::fromJson(jsonResult.unwrap());
 		if (!token.valid) {
 			log::warn("Failed to map Versus realtime token");
 			return;
@@ -714,7 +716,7 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 	auto afterID = incremental ? m_latestMessageID : 0;
 	auto limit = incremental ? MESSAGE_FETCH_LIMIT : 0;
 
-	PvpClient::getMessages(m_matchID, afterID, limit, AuthService::getToken(), [&](web::WebResponse& res) {
+	PvpClient::getMessages(m_matchID, afterID, limit, [&](web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -758,7 +760,7 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 
 	m_chatSending = true;
 
-	PvpClient::sendMessage(m_matchID, content, AuthService::getToken(), [&](web::WebResponse& res) {
+	PvpClient::postMessage(m_matchID, content, [&](web::WebResponse& res) {
 		m_chatSending = false;
 
 		if (m_cleanedUp) {

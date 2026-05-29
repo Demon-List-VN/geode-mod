@@ -1,13 +1,13 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include "../models/LevelModels.hpp"
+#include "../dtos/LevelListDto.hpp"
 
 namespace gdvn::level_info {
 
 geode::prelude::CCLabelBMFont* createLabel(GJGameLevel* level, std::string str, int order);
 std::vector<std::string> getListInfoLabels(
-	std::vector<gdvn::models::LevelListModel> const& lists,
+	std::vector<LevelListDto> const& lists,
 	bool isLoggedIn
 );
 

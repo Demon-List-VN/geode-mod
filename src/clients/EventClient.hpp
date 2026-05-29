@@ -8,10 +8,8 @@
 using namespace geode::prelude;
 
 class EventClient {
-	static async::TaskHolder<web::WebResponse> m_put_holder;
-
 public:
 	using Callback = std::function<void(web::WebResponse&)>;
 
-	static void submitLevel(int levelID, float progress, std::string const& token, Callback callback);
+	static void putLevel(int levelID, float progress, Callback callback);
 };

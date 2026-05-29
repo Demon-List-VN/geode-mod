@@ -4,9 +4,9 @@
 #include <cmath>
 
 #include "AuthService.hpp"
+#include "../adapters/ActivePvpMatchResponseAdapter.hpp"
 #include "../clients/LevelClient.hpp"
 #include "../clients/PvpClient.hpp"
-#include "../models/PvpModels.hpp"
 
 PvpSubmitterService::PvpSubmitterService() : m_state(std::make_shared<State>()) {}
 
@@ -19,10 +19,8 @@ PvpSubmitterService::PvpSubmitterService(int levelID, std::string playMode) : m_
 		return;
 	}
 
-	std::string APIKey = AuthService::getToken();
-
 	std::weak_ptr<State> state = m_state;
-	LevelClient::getActivePvpMatch(levelID, APIKey, [&](web::WebResponse& res) {
+	LevelClient::getActivePvpMatch(levelID, [&](web::WebResponse& res) {
 		if (!res.ok()) {
 			return;
 		}
@@ -37,7 +35,7 @@ PvpSubmitterService::PvpSubmitterService(int levelID, std::string playMode) : m_
 			return;
 		}
 
-		auto match = gdvn::models::ActivePvpMatchResponseModel::fromJson(jsonResult.unwrap());
+		auto match = gdvn::adapters::ActivePvpMatchResponseAdapter::fromJson(jsonResult.unwrap());
 		if (match.valid) {
 			if (auto locked = state.lock()) {
 				locked->matchID = match.matchID;
@@ -63,9 +61,7 @@ void PvpSubmitterService::submitPlayMode(std::shared_ptr<State> state, std::stri
 
 	state->submittedPlayMode = normalized;
 
-	std::string APIKey = AuthService::getToken();
-
-	PvpClient::submitPlayMode(state->matchID, normalized, APIKey, [&](web::WebResponse& res) {
+	PvpClient::putPlayMode(state->matchID, normalized, [&](web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to submit Versus play mode '{}': HTTP {}", normalized, res.code());
 		}
@@ -77,9 +73,7 @@ void PvpSubmitterService::submit(bool completed) {
 		return;
 	}
 
-	std::string APIKey = AuthService::getToken();
-
-	PvpClient::submitProgress(m_state->matchID, m_state->best, completed, APIKey, [&](web::WebResponse& res) {});
+	PvpClient::putProgress(m_state->matchID, m_state->best, completed, [&](web::WebResponse& res) {});
 }
 
 void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
@@ -97,10 +91,8 @@ void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
 		return;
 	}
 
-	std::string APIKey = AuthService::getToken();
-
 	std::weak_ptr<State> weakState = state;
-	PvpClient::submitDeathCount(state->matchID, serializeDeathCount(count), APIKey, [&](web::WebResponse& res) {
+	PvpClient::postDeathCount(state->matchID, serializeDeathCount(count), [&](web::WebResponse& res) {
 		if (auto locked = weakState.lock()) {
 			if (res.ok()) {
 				for (size_t i = 0; i < locked->pendingDeathCount.size(); i++) {

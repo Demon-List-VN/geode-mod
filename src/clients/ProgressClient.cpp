@@ -2,20 +2,26 @@
 
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> ProgressClient::m_post_holder;
+namespace {
+async::TaskHolder<web::WebResponse> s_postHolder;
+}
 
-void ProgressClient::submitHeatmap(size_t count, std::string const& token, Callback callback) {
+static std::string getToken() {
+	return Mod::get()->getSavedValue<std::string>("api-key");
+}
+
+void ProgressClient::postHeatmap(size_t count, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/players/heatmap/" + std::to_string(count);
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_post_holder.spawn(req.post(url), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void ProgressClient::submitDeathCount(int levelID, std::string const& count, bool completed, std::string const& token, Callback callback) {
+void ProgressClient::postDeathCount(int levelID, std::string const& count, bool completed, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/deathCount/" + std::to_string(levelID) + "/" + count;
 
@@ -23,9 +29,9 @@ void ProgressClient::submitDeathCount(int levelID, std::string const& count, boo
 		url += "?completed";
 	}
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_post_holder.spawn(req.post(url), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }

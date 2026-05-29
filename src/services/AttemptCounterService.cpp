@@ -11,7 +11,5 @@ void AttemptCounterService::add() {
 void AttemptCounterService::submit() {
 	using namespace geode::prelude;
 
-	auto APIKey = AuthService::getToken();
-
-	ProgressClient::submitHeatmap(cnt, APIKey, [&](web::WebResponse& res) {});
+	ProgressClient::postHeatmap(cnt, [&](web::WebResponse& res) {});
 }

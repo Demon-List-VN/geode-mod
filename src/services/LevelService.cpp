@@ -1,17 +1,17 @@
 #include "LevelService.hpp"
 
-#include "AuthService.hpp"
+#include "../adapters/LevelInfoResponseAdapter.hpp"
 #include "../clients/LevelClient.hpp"
 
 void LevelService::getLevel(int id, GetLevelCallback callback) {
-	LevelClient::getLevel(id, AuthService::getToken(), [&](web::WebResponse& res) {
-		gdvn::models::LevelInfoResponseModel level;
+	LevelClient::getLevel(id, [&](web::WebResponse& res) {
+		LevelInfoResponseDto level;
 
 		if (res.ok()) {
 			auto jsonResult = res.json();
 
 			if (jsonResult) {
-				level = gdvn::models::LevelInfoResponseModel::fromJson(jsonResult.unwrap());
+				level = gdvn::adapters::LevelInfoResponseAdapter::fromJson(jsonResult.unwrap());
 			}
 		}
 

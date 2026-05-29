@@ -1,4 +1,5 @@
 #include "VersionCheckerService.hpp"
+#include "../adapters/GithubReleaseResponseAdapter.hpp"
 #include "../clients/UpdateClient.hpp"
 #include <Geode/loader/Dirs.hpp>
 #include <Geode/loader/ModMetadata.hpp>
@@ -6,17 +7,11 @@
 #include <Geode/ui/Notification.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/ui/Popup.hpp>
-#include "../models/GithubModels.hpp"
 
-namespace {
-	constexpr char const* MOD_ID = "nampe.gdvn";
-	constexpr char const* MOD_FILE_NAME = "nampe.gdvn.geode";
-
-	void showUpdateToast(std::string const& message, geode::NotificationIcon icon, float time = 2.0f) {
-		geode::Loader::get()->queueInMainThread([&] {
-			geode::Notification::create(message, icon, time)->show();
-		});
-	}
+static void showUpdateToast(std::string const& message, geode::NotificationIcon icon, float time = 2.0f) {
+	geode::Loader::get()->queueInMainThread([&] {
+		geode::Notification::create(message, icon, time)->show();
+	});
 }
 
 void VersionCheckerService::downloadUpdate() {
@@ -27,7 +22,7 @@ void VersionCheckerService::downloadUpdate() {
 	);
 	loadingToast->show();
 
-	UpdateClient::downloadLatest([&](web::WebResponse& res) {
+	UpdateClient::getLatestDownload([&](web::WebResponse& res) {
 		geode::Loader::get()->queueInMainThread([&] {
 			loadingToast->hide();
 		});
@@ -38,7 +33,7 @@ void VersionCheckerService::downloadUpdate() {
 			return;
 		}
 
-		auto tmpPath = dirs::getTempDir() / MOD_FILE_NAME;
+		auto tmpPath = dirs::getTempDir() / "nampe.gdvn.geode";
 		tmpPath += ".tmp";
 
 		auto data = std::move(res).data();
@@ -50,7 +45,7 @@ void VersionCheckerService::downloadUpdate() {
 		}
 
 		auto metadata = ModMetadata::createFromGeodeFile(tmpPath);
-		if (metadata.hasErrors() || metadata.getID() != MOD_ID) {
+		if (metadata.hasErrors() || metadata.getID() != "nampe.gdvn") {
 			for (auto const& error : metadata.getErrors()) {
 				log::warn("Downloaded GDVN update is invalid: {}", error);
 			}
@@ -62,7 +57,7 @@ void VersionCheckerService::downloadUpdate() {
 			return;
 		}
 
-		auto targetPath = dirs::getModsDir() / MOD_FILE_NAME;
+		auto targetPath = dirs::getModsDir() / "nampe.gdvn.geode";
 		auto installedPath = Mod::get()->getPackagePath();
 
 		auto removeExisting = [&tmpPath](std::filesystem::path const& path) -> bool {
@@ -121,7 +116,7 @@ void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
 			return;
 		}
 
-		auto release = gdvn::models::GithubReleaseResponseModel::fromJson(resJsonResult.unwrap());
+		auto release = gdvn::adapters::GithubReleaseResponseAdapter::fromJson(resJsonResult.unwrap());
 		if (!release.valid) {
 			return;
 		}

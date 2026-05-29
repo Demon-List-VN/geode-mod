@@ -2,10 +2,17 @@
 
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> LevelClient::m_get_holder;
+namespace {
+async::TaskHolder<web::WebResponse> s_getHolder;
+}
 
-void LevelClient::getLevel(int id, std::string const& token, Callback callback) {
+static std::string getToken() {
+	return Mod::get()->getSavedValue<std::string>("api-key");
+}
+
+void LevelClient::getLevel(int id, Callback callback) {
 	web::WebRequest req;
+	auto token = getToken();
 
 	if (!token.empty()) {
 		req.header("Authorization", "Bearer " + token);
@@ -13,23 +20,23 @@ void LevelClient::getLevel(int id, std::string const& token, Callback callback) 
 
 	auto url = API_URL + "/lists/levels/" + std::to_string(id) + "/starred";
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void LevelClient::getActivePvpMatch(int levelID, std::string const& token, Callback callback) {
+void LevelClient::getActivePvpMatch(int levelID, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inPvp";
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
 
-void LevelClient::getEventLevel(int levelID, std::string const& token, std::string const& type, Callback callback) {
+void LevelClient::getEventLevel(int levelID, std::string const& type, Callback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent";
 
@@ -37,9 +44,9 @@ void LevelClient::getEventLevel(int levelID, std::string const& token, std::stri
 		url += "?type=" + type;
 	}
 
-	req.header("Authorization", "Bearer " + token);
+	req.header("Authorization", "Bearer " + getToken());
 
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
 		callback(res);
 	});
 }
