@@ -1,24 +1,19 @@
 #include "EventSubmitterService.hpp"
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
-#include "../common.hpp"
-
-async::TaskHolder<web::WebResponse> EventSubmitterService::m_get_holder, EventSubmitterService::m_put_holder;
+#include "../clients/EventClient.hpp"
+#include "../clients/LevelClient.hpp"
 
 EventSubmitterService::EventSubmitterService() : m_state(std::make_shared<State>()) {}
 
 EventSubmitterService::~EventSubmitterService() = default;
 
 EventSubmitterService::EventSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent";
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
 	std::weak_ptr<State> state = m_state;
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	LevelClient::getEventLevel(levelID, APIKey, "", [&](web::WebResponse& res) {
 		if (auto locked = state.lock()) {
 			locked->inEvent.store(res.ok());
 		}
@@ -30,12 +25,9 @@ void EventSubmitterService::submit() {
 		return;
 	}
 
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/events/submitLevel/" + std::to_string(m_state->levelID) + "?progress=" + std::to_string(m_state->best) + "&password=" + EVENT_PASSWORD;
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
-	m_put_holder.spawn(req.put(url), [&](web::WebResponse res) {});
+	EventClient::submitLevel(m_state->levelID, m_state->best, APIKey, [&](web::WebResponse& res) {});
 }
 
 void EventSubmitterService::record(float progress) {

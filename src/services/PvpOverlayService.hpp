@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/PlayLayer.hpp>
 #include "PvpRealtimeSocketService.hpp"
@@ -65,10 +64,6 @@ private:
 	PvpChatPopupService* m_chatPopup = nullptr;
 	PvpSubmitterService* m_submitter = nullptr;
 	std::shared_ptr<PvpRealtimeSocketService> m_socket;
-	async::TaskHolder<web::WebResponse> m_matchHolder;
-	async::TaskHolder<web::WebResponse> m_tokenHolder;
-	async::TaskHolder<web::WebResponse> m_messagesHolder;
-	async::TaskHolder<web::WebResponse> m_sendMessageHolder;
 
 	int m_levelID = 0;
 	int m_matchID = 0;

@@ -1,9 +1,8 @@
 #include "AuthService.hpp"
+#include "../clients/AuthClient.hpp"
 #include "../common.hpp"
 #include "../models/AuthModels.hpp"
 #include <Geode/ui/Notification.hpp>
-
-async::TaskHolder<web::WebResponse> AuthService::m_post_holder, AuthService::m_get_holder;
 
 namespace {
     void showOTPDialog(std::string const& code) {
@@ -58,9 +57,7 @@ void AuthService::login() {
 }
 
 void AuthService::requestOTP() {
-	web::WebRequest req;
-
-	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [&](web::WebResponse res) {
+	AuthClient::requestOTP([&](web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to create OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
@@ -90,10 +87,7 @@ void AuthService::requestOTP() {
 }
 
 void AuthService::checkOTP(std::string code) {
-	web::WebRequest req;
-	std::string url = API_URL + "/auth/otp/" + code;
-
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	AuthClient::checkOTP(code, [&](web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to verify OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
@@ -128,12 +122,7 @@ void AuthService::checkOTP(std::string code) {
 }
 
 void AuthService::logout() {
-    web::WebRequest req;
-    std::string url = API_URL + "/APIKey";
-
-    req.header("Authorization", "Bearer " + getToken());
-
-    m_post_holder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
+    AuthClient::logout(getToken(), [&](web::WebResponse& res) {
         Mod::get()->setSavedValue("api-key", std::string(""));
         Mod::get()->setSavedValue("player-name", std::string(""));
         FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
@@ -141,9 +130,6 @@ void AuthService::logout() {
 }
 
 void AuthService::check() {
-    web::WebRequest req;
-    std::string url = API_URL + "/auth/me";
-
     auto loadingToast = geode::Notification::create(
         "Checking GDVN login status...",
         geode::NotificationIcon::Loading,
@@ -166,10 +152,7 @@ void AuthService::check() {
         return;
     }
 
-    req.header("Authorization", "Bearer " + getToken());
-    req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
-
-    m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+    AuthClient::checkMe(getToken(), Mod::get()->getVersion().toNonVString(), [&](web::WebResponse& res) {
         loadingToast->hide();
 
         if (!res.ok()) {

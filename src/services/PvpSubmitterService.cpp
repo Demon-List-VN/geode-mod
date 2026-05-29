@@ -1,14 +1,12 @@
 #include "PvpSubmitterService.hpp"
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 #include <algorithm>
 #include <cmath>
 
 #include "AuthService.hpp"
-#include "../common.hpp"
+#include "../clients/LevelClient.hpp"
+#include "../clients/PvpClient.hpp"
 #include "../models/PvpModels.hpp"
-
-async::TaskHolder<web::WebResponse> PvpSubmitterService::m_get_holder, PvpSubmitterService::m_put_holder, PvpSubmitterService::m_death_holder, PvpSubmitterService::m_mode_holder;
 
 PvpSubmitterService::PvpSubmitterService() : m_state(std::make_shared<State>()) {}
 
@@ -21,13 +19,10 @@ PvpSubmitterService::PvpSubmitterService(int levelID, std::string playMode) : m_
 		return;
 	}
 
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inPvp";
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
 	std::weak_ptr<State> state = m_state;
-	m_get_holder.spawn(req.get(url), [&](web::WebResponse res) {
+	LevelClient::getActivePvpMatch(levelID, APIKey, [&](web::WebResponse& res) {
 		if (!res.ok()) {
 			return;
 		}
@@ -68,12 +63,9 @@ void PvpSubmitterService::submitPlayMode(std::shared_ptr<State> state, std::stri
 
 	state->submittedPlayMode = normalized;
 
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(state->matchID) + "/play-mode?playMode=" + normalized;
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
-	m_mode_holder.spawn(req.put(url), [&](web::WebResponse res) {
+	PvpClient::submitPlayMode(state->matchID, normalized, APIKey, [&](web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to submit Versus play mode '{}': HTTP {}", normalized, res.code());
 		}
@@ -85,15 +77,9 @@ void PvpSubmitterService::submit(bool completed) {
 		return;
 	}
 
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(m_state->matchID) + "/progress?progress=" + std::to_string(m_state->best);
-	if (completed) {
-		url += "&completed=true";
-	}
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
-	m_put_holder.spawn(req.put(url), [&](web::WebResponse res) {});
+	PvpClient::submitProgress(m_state->matchID, m_state->best, completed, APIKey, [&](web::WebResponse& res) {});
 }
 
 void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
@@ -111,13 +97,10 @@ void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
 		return;
 	}
 
-	web::WebRequest req = web::WebRequest();
-	std::string url = API_URL + "/pvp/matches/" + std::to_string(state->matchID) + "/deaths?count=" + serializeDeathCount(count);
 	std::string APIKey = AuthService::getToken();
 
-	req.header("Authorization", "Bearer " + APIKey);
 	std::weak_ptr<State> weakState = state;
-	m_death_holder.spawn(req.post(url), [&](web::WebResponse res) {
+	PvpClient::submitDeathCount(state->matchID, serializeDeathCount(count), APIKey, [&](web::WebResponse& res) {
 		if (auto locked = weakState.lock()) {
 			if (res.ok()) {
 				for (size_t i = 0; i < locked->pendingDeathCount.size(); i++) {

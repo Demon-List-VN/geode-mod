@@ -1,17 +1,14 @@
 #include "VersionCheckerService.hpp"
+#include "../clients/UpdateClient.hpp"
 #include <Geode/loader/Dirs.hpp>
 #include <Geode/loader/ModMetadata.hpp>
 #include <Geode/Geode.hpp>
 #include <Geode/ui/Notification.hpp>
-#include <Geode/utils/web.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/ui/Popup.hpp>
 #include "../models/GithubModels.hpp"
 
-async::TaskHolder<web::WebResponse> VersionCheckerService::m_holder;
-
 namespace {
-	constexpr char const* UPDATE_URL = "https://github.com/Demon-List-VN/geode-mod/releases/latest/download/nampe.gdvn.geode";
 	constexpr char const* MOD_ID = "nampe.gdvn";
 	constexpr char const* MOD_FILE_NAME = "nampe.gdvn.geode";
 
@@ -30,10 +27,7 @@ void VersionCheckerService::downloadUpdate() {
 	);
 	loadingToast->show();
 
-	web::WebRequest req = web::WebRequest();
-	req.userAgent("geode");
-
-	m_holder.spawn(req.get(UPDATE_URL), [&](web::WebResponse res) {
+	UpdateClient::downloadLatest([&](web::WebResponse& res) {
 		geode::Loader::get()->queueInMainThread([&] {
 			loadingToast->hide();
 		});
@@ -113,10 +107,7 @@ void VersionCheckerService::downloadUpdate() {
 }
 
 void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
-	web::WebRequest req = web::WebRequest();
-    req.userAgent("geode");
-
-	m_holder.spawn(req.get("https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest"), [&](web::WebResponse res) {
+	UpdateClient::getLatestRelease([&](web::WebResponse& res) {
 		if (!res.ok()) {
 			if (notifyIfCurrent) {
 				showUpdateToast("Failed to check for GDVN updates", geode::NotificationIcon::Error);

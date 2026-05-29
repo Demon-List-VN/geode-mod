@@ -9,8 +9,6 @@
 using namespace geode::prelude;
 
 class LevelService {
-	static async::TaskHolder<web::WebResponse> m_get_holder;
-
 public:
 	using GetLevelCallback = std::function<void(
 		gdvn::models::LevelInfoResponseModel const& level,

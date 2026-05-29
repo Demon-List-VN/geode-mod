@@ -2,6 +2,9 @@
 
 #include "AuthService.hpp"
 #include "PvpSubmitterService.hpp"
+#include "../clients/AuthClient.hpp"
+#include "../clients/LevelClient.hpp"
+#include "../clients/PvpClient.hpp"
 #include "../common.hpp"
 #include "../models/PvpModels.hpp"
 
@@ -587,11 +590,7 @@ void PvpOverlayService::requestMatch() {
 		return;
 	}
 
-	web::WebRequest req;
-	req.header("Authorization", "Bearer " + AuthService::getToken());
-	std::string url = API_URL + "/levels/" + std::to_string(m_levelID) + "/inPvp";
-
-	m_matchHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	LevelClient::getActivePvpMatch(m_levelID, AuthService::getToken(), [&](web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -675,11 +674,7 @@ void PvpOverlayService::requestRealtimeToken() {
 
 	m_requestingRealtimeToken = true;
 
-	web::WebRequest req;
-	req.header("Authorization", "Bearer " + AuthService::getToken());
-	std::string url = API_URL + "/auth/realtime-token";
-
-	m_tokenHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	AuthClient::getRealtimeToken(AuthService::getToken(), [&](web::WebResponse& res) {
 		m_requestingRealtimeToken = false;
 
 		if (m_cleanedUp) {
@@ -716,31 +711,10 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 		return;
 	}
 
-	web::WebRequest req;
-	req.header("Authorization", "Bearer " + AuthService::getToken());
+	auto afterID = incremental ? m_latestMessageID : 0;
+	auto limit = incremental ? MESSAGE_FETCH_LIMIT : 0;
 
-	auto url = API_URL + "/pvp/matches/" + std::to_string(m_matchID) + "/messages";
-	std::vector<std::string> params;
-
-	if (incremental && m_latestMessageID > 0) {
-		params.push_back("afterId=" + std::to_string(m_latestMessageID));
-	}
-
-	if (incremental) {
-		params.push_back("limit=" + std::to_string(MESSAGE_FETCH_LIMIT));
-	}
-
-	if (!params.empty()) {
-		url += "?";
-		for (size_t i = 0; i < params.size(); ++i) {
-			if (i > 0) {
-				url += "&";
-			}
-			url += params[i];
-		}
-	}
-
-	m_messagesHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	PvpClient::getMessages(m_matchID, afterID, limit, AuthService::getToken(), [&](web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -784,15 +758,7 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 
 	m_chatSending = true;
 
-	web::WebRequest req;
-	req.header("Authorization", "Bearer " + AuthService::getToken());
-
-	auto body = matjson::Value::object();
-	body["content"] = content;
-	req.bodyJSON(body);
-
-	auto url = API_URL + "/pvp/matches/" + std::to_string(m_matchID) + "/messages";
-	m_sendMessageHolder.spawn(req.post(url), [&](web::WebResponse res) {
+	PvpClient::sendMessage(m_matchID, content, AuthService::getToken(), [&](web::WebResponse& res) {
 		m_chatSending = false;
 
 		if (m_cleanedUp) {
@@ -1453,10 +1419,6 @@ void PvpOverlayService::cleanup() {
 	}
 
 	m_cleanedUp = true;
-	m_matchHolder.cancel();
-	m_tokenHolder.cancel();
-	m_messagesHolder.cancel();
-	m_sendMessageHolder.cancel();
 	this->closeSocket();
 
 	if (s_activeOverlay == this) {

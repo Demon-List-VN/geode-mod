@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 #include <array>
 #include <atomic>
 #include <memory>
@@ -25,7 +24,6 @@ class PvpSubmitterService {
 	};
 
 	std::shared_ptr<State> m_state;
-	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder, m_death_holder, m_mode_holder;
 
 	void submit(bool completed = false);
 	static void submitDeathCount(std::shared_ptr<State> state);

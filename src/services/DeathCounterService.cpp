@@ -1,11 +1,8 @@
 #include "DeathCounterService.hpp"
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
-#include "../common.hpp"
-
-async::TaskHolder<web::WebResponse> DeathCounterService::m_holder;
+#include "../clients/ProgressClient.hpp"
 
 DeathCounterService::DeathCounterService() {}
 
@@ -21,13 +18,6 @@ void DeathCounterService::submit() {
 	using namespace geode::prelude;
 
 	auto APIKey = AuthService::getToken();
-	std::string urlPath = "/deathCount/" + std::to_string(deathData.levelID) + "/" + deathData.serialize();
 
-    if (completed) {
-        urlPath += "?completed";
-    }
-
-	web::WebRequest req = web::WebRequest();
-	req.header("Authorization", "Bearer " + APIKey);
-	m_holder.spawn(req.post(API_URL + urlPath), [&](web::WebResponse res) {});
+	ProgressClient::submitDeathCount(deathData.levelID, deathData.serialize(), completed, APIKey, [&](web::WebResponse& res) {});
 }

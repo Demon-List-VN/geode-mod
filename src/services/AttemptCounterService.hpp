@@ -1,14 +1,12 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 
 using namespace geode::prelude;
 
 class AttemptCounterService {
 private:
 	size_t cnt = 0;
-	static geode::async::TaskHolder<geode::utils::web::WebResponse> m_holder;
 public:
 	void add();
 	void submit();

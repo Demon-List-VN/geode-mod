@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
-#include <Geode/utils/web.hpp>
 #include <atomic>
 #include <memory>
 
@@ -17,7 +16,6 @@ class EventSubmitterService {
 	};
 
 	std::shared_ptr<State> m_state;
-	static async::TaskHolder<web::WebResponse> m_get_holder, m_put_holder;
 
 	void submit();
 public:
