@@ -10,6 +10,7 @@
 #include <Geode/ui/TextInput.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <cctype>
 #include <cmath>
@@ -185,33 +186,46 @@ std::int64_t daysFromCivil(int year, unsigned month, unsigned day) {
 	return era * 146097 + static_cast<int>(doe) - 719468;
 }
 
+bool parseFixedInt(std::string const& value, size_t offset, size_t length, int& output) {
+	if (offset + length > value.size()) {
+		return false;
+	}
+
+	auto begin = value.data() + offset;
+	auto end = begin + length;
+	auto result = std::from_chars(begin, end, output);
+	return result.ec == std::errc() && result.ptr == end;
+}
+
 std::int64_t parseIsoEpochSeconds(std::string const& value) {
 	if (value.size() < 19) {
 		return 0;
 	}
 
-	try {
-		const auto year = std::stoi(value.substr(0, 4));
-		const auto month = static_cast<unsigned>(std::stoi(value.substr(5, 2)));
-		const auto day = static_cast<unsigned>(std::stoi(value.substr(8, 2)));
-		const auto hour = std::stoi(value.substr(11, 2));
-		const auto minute = std::stoi(value.substr(14, 2));
-		const auto second = std::stoi(value.substr(17, 2));
+	int year = 0;
+	int month = 0;
+	int day = 0;
+	int hour = 0;
+	int minute = 0;
+	int second = 0;
 
-		if (
-			value[4] != '-' || value[7] != '-' || value[10] != 'T' ||
-			value[13] != ':' || value[16] != ':' ||
-			month < 1 || month > 12 || day < 1 || day > 31 ||
-			hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
-			second < 0 || second > 60
-		) {
-			return 0;
-		}
-
-		return daysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second;
-	} catch (...) {
+	if (
+		value[4] != '-' || value[7] != '-' || value[10] != 'T' ||
+		value[13] != ':' || value[16] != ':' ||
+		!parseFixedInt(value, 0, 4, year) ||
+		!parseFixedInt(value, 5, 2, month) ||
+		!parseFixedInt(value, 8, 2, day) ||
+		!parseFixedInt(value, 11, 2, hour) ||
+		!parseFixedInt(value, 14, 2, minute) ||
+		!parseFixedInt(value, 17, 2, second) ||
+		month < 1 || month > 12 || day < 1 || day > 31 ||
+		hour < 0 || hour > 23 || minute < 0 || minute > 59 ||
+		second < 0 || second > 60
+	) {
 		return 0;
 	}
+
+	return daysFromCivil(year, static_cast<unsigned>(month), static_cast<unsigned>(day)) * 86400 + hour * 3600 + minute * 60 + second;
 }
 
 std::string formatCountdown(std::int64_t seconds) {
@@ -419,15 +433,6 @@ protected:
 		Popup::onClose(sender);
 	}
 
-	void keyDown(enumKeyCodes key, double timestamp) override {
-		if (key == KEY_Enter || key == KEY_NumEnter) {
-			this->submit();
-			return;
-		}
-
-		Popup::keyDown(key, timestamp);
-	}
-
 	void textChanged(CCTextInputNode*) override {}
 
 	void textInputReturn(CCTextInputNode*) override {
@@ -595,16 +600,17 @@ void PvpOverlay::requestMatch() {
 			return;
 		}
 
-		try {
-			auto json = res.json().unwrap();
-			this->parseMatchSnapshot(json);
-			this->refreshLabel();
-
-			if (this->isReadyForRealtime()) {
-				this->requestRealtimeToken();
-			}
-		} catch (...) {
+		auto json = res.json();
+		if (!json) {
 			log::warn("Failed to parse Versus overlay match snapshot");
+			return;
+		}
+
+		this->parseMatchSnapshot(json.unwrap());
+		this->refreshLabel();
+
+		if (this->isReadyForRealtime()) {
+			this->requestRealtimeToken();
 		}
 	});
 }
@@ -678,16 +684,18 @@ void PvpOverlay::requestRealtimeToken() {
 			return;
 		}
 
-		try {
-			auto json = res.json().unwrap();
-			m_supabaseUrl = getString(json, "supabaseUrl");
-			m_anonKey = getString(json, "anonKey");
-			m_realtimeAccessToken = getString(json, "accessToken");
-			m_realtimeTokenExpiresAt = getInteger(json, "expiresAt");
-			this->connectRealtime();
-		} catch (...) {
+		auto jsonResult = res.json();
+		if (!jsonResult) {
 			log::warn("Failed to parse Versus realtime token");
+			return;
 		}
+
+		auto json = jsonResult.unwrap();
+		m_supabaseUrl = getString(json, "supabaseUrl");
+		m_anonKey = getString(json, "anonKey");
+		m_realtimeAccessToken = getString(json, "accessToken");
+		m_realtimeTokenExpiresAt = getInteger(json, "expiresAt");
+		this->connectRealtime();
 	});
 }
 
@@ -730,11 +738,13 @@ void PvpOverlay::requestMessages(bool animateNew, bool incremental) {
 			return;
 		}
 
-		try {
-			this->handleMessagesPayload(res.json().unwrap(), animateNew);
-		} catch (...) {
+		auto json = res.json();
+		if (!json) {
 			log::warn("Failed to parse Versus chat messages");
+			return;
 		}
+
+		this->handleMessagesPayload(json.unwrap(), animateNew);
 	});
 }
 
@@ -787,10 +797,11 @@ void PvpOverlay::submitChatMessage(std::string content) {
 			return;
 		}
 
-		try {
-			this->handleMessageRow(res.json().unwrap(), true);
-		} catch (...) {
+		auto json = res.json();
+		if (!json) {
 			log::warn("Failed to parse sent Versus chat message");
+		} else {
+			this->handleMessageRow(json.unwrap(), true);
 		}
 
 		if (m_chatPopup) {
@@ -840,12 +851,13 @@ void PvpOverlay::onRealtimeMessage(std::string const& message) {
 		return;
 	}
 
-	try {
-		auto json = matjson::parse(message).unwrap();
-		this->handleRealtimeMessage(json);
-	} catch (...) {
+	auto json = matjson::parse(message);
+	if (!json) {
 		log::warn("Failed to parse Versus realtime message");
+		return;
 	}
+
+	this->handleRealtimeMessage(json.unwrap());
 }
 
 void PvpOverlay::onRealtimeClose() {

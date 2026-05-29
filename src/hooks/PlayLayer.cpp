@@ -3,6 +3,7 @@
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
 #include <Geode/binding/CheckpointGameObject.hpp>
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include "../services/AttemptCounter.hpp"
@@ -21,14 +22,12 @@ class $modify(DTPlayLayer, PlayLayer) {
 		bool hasRespawned = false;
 		bool isCheatedRun = false;
 		std::string cheatReason;
-		bool noclipDetected = false;
-		GameObject* disabledCheatObject = nullptr;
 		AttemptCounter attemptCounter;
 		DeathCounter deathCounter;
-		EventSubmitter *eventSubmitter;
-		RaidSubmitter *raidSubmitter;
-		PvpSubmitter *pvpSubmitter;
-		PvpOverlay *pvpOverlay = nullptr;
+		std::unique_ptr<EventSubmitter> eventSubmitter;
+		std::unique_ptr<RaidSubmitter> raidSubmitter;
+		std::unique_ptr<PvpSubmitter> pvpSubmitter;
+		std::unique_ptr<PvpOverlay> pvpOverlay;
 		std::unordered_set<int> platformerCheckpointIds;
 		int platformerCheckpointCount = 0;
 		bool lastPracticeMode = false;
@@ -83,21 +82,11 @@ class $modify(DTPlayLayer, PlayLayer) {
 			markRunCheated("damage bypass");
 		}
 
-		return m_fields->isCheatedRun || m_fields->noclipDetected;
+		return m_fields->isCheatedRun;
 	}
 
-	void checkNoclip(PlayerObject* player, GameObject* hitObject) {
-		if (!m_fields->disabledCheatObject) {
-			m_fields->disabledCheatObject = hitObject;
-		}
-
-		if (
-			!m_fields->noclipDetected &&
-			m_fields->disabledCheatObject != hitObject &&
-			!player->m_isDead &&
-			!m_levelEndAnimationStarted
-		) {
-			m_fields->noclipDetected = true;
+	void checkNoclip(PlayerObject* player) {
+		if (!m_fields->isCheatedRun && !player->m_isDead && !m_levelEndAnimationStarted) {
 			markRunCheated("noclip");
 		}
 	}
@@ -111,17 +100,17 @@ class $modify(DTPlayLayer, PlayLayer) {
 		auto best = level->m_normalPercent.value();
 
 		m_fields->deathCounter = DeathCounter(id, best >= 100);
-		m_fields->eventSubmitter = new EventSubmitter(id);
-		m_fields->raidSubmitter = new RaidSubmitter(id);
+		m_fields->eventSubmitter = std::make_unique<EventSubmitter>(id);
+		m_fields->raidSubmitter = std::make_unique<RaidSubmitter>(id);
 		m_fields->lastPracticeMode = m_isPracticeMode;
-		m_fields->pvpSubmitter = new PvpSubmitter(
+		m_fields->pvpSubmitter = std::make_unique<PvpSubmitter>(
 			id,
 			m_isPracticeMode ? "practice" : "normal"
 		);
 		refreshCheatGuardReason();
 
 		if (AuthService::isLoggedIn() && !m_isPracticeMode) {
-			m_fields->pvpOverlay = new PvpOverlay(this, id, m_fields->pvpSubmitter);
+			m_fields->pvpOverlay = std::make_unique<PvpOverlay>(this, id, m_fields->pvpSubmitter.get());
 		}
 
 		return true;
@@ -153,7 +142,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 			return;
 		}
 
-		checkNoclip(player, p1);
+		checkNoclip(player);
 
 		if (!player->m_isDead) {
 			return;
@@ -227,18 +216,12 @@ class $modify(DTPlayLayer, PlayLayer) {
 		m_fields->hasRespawned = true;
 		m_fields->isCheatedRun = false;
 		m_fields->cheatReason.clear();
-		m_fields->noclipDetected = false;
-		m_fields->disabledCheatObject = nullptr;
 		refreshCheatGuardReason();
 	}
 
 	void onQuit() {
-		delete m_fields->pvpOverlay;
-		m_fields->pvpOverlay = nullptr;
-
+		m_fields->pvpOverlay.reset();
 		bool isCheated = isRunCheated();
-
-		PlayLayer::onQuit();
 
 		if (isCheated) {
 			log::info("Skipping gameplay API submissions because the run is cheated");
@@ -250,8 +233,10 @@ class $modify(DTPlayLayer, PlayLayer) {
 			m_fields->pvpSubmitter->flushDeathCount();
 		}
 
-		delete m_fields->eventSubmitter;
-		delete m_fields->raidSubmitter;
-		delete m_fields->pvpSubmitter;
+		m_fields->eventSubmitter.reset();
+		m_fields->raidSubmitter.reset();
+		m_fields->pvpSubmitter.reset();
+
+		PlayLayer::onQuit();
 	}
 };

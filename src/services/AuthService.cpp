@@ -60,23 +60,31 @@ void AuthService::requestOTP() {
 	web::WebRequest req;
 
 	m_post_holder.spawn(req.post(API_URL + "/auth/otp"), [](web::WebResponse res) {
-		try {
-			if (!res.ok()) {
-				log::warn("Failed to create OTP code: HTTP {}", res.code());
-				FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
-				return;
-			}
-
-			auto json = res.json().unwrap();
-			auto code = json["code"].asString().unwrap();
-
-		    geode::Loader::get()->queueInMainThread([code] {
-                showOTPDialog(code);
-		    });
-		} catch (...) {
-			log::warn("Failed to create OTP code: unexpected error");
+		if (!res.ok()) {
+			log::warn("Failed to create OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
+			return;
 		}
+
+		auto jsonResult = res.json();
+		if (!jsonResult) {
+			log::warn("Failed to create OTP code: invalid response");
+			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
+			return;
+		}
+
+		auto json = jsonResult.unwrap();
+		if (!json["code"].isString()) {
+			log::warn("Failed to create OTP code: invalid response");
+			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
+			return;
+		}
+
+		auto code = json["code"].asString().unwrapOrDefault();
+
+		geode::Loader::get()->queueInMainThread([code] {
+			showOTPDialog(code);
+		});
 	});
 }
 
@@ -85,32 +93,40 @@ void AuthService::checkOTP(std::string code) {
 	std::string url = API_URL + "/auth/otp/" + code;
 
 	m_get_holder.spawn(req.get(url), [](web::WebResponse res) {
-		try {
-			if (!res.ok()) {
-				log::warn("Failed to verify OTP code: HTTP {}", res.code());
-				FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
-				return;
-			}
-
-			auto json = res.json().unwrap();
-			bool granted = json["granted"].asBool().unwrap();
-
-			if (!granted) {
-				FLAlertLayer::create("GDVN Login", "Access has not been granted yet.\nPlease grant access on the website first.", "OK")->show();
-				return;
-			}
-
-			std::string key = json["key"].asString().unwrap();
-			std::string player = json["player"].asString().unwrap();
-
-			Mod::get()->setSavedValue("api-key", key);
-			Mod::get()->setSavedValue("player-name", player);
-
-			FLAlertLayer::create("GDVN Login", "You are logged in as <cg>" + player + "</c>", "OK")->show();
-		} catch (...) {
-			log::warn("Failed to verify OTP code: unexpected error");
+		if (!res.ok()) {
+			log::warn("Failed to verify OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
+			return;
 		}
+
+		auto jsonResult = res.json();
+		if (!jsonResult) {
+			log::warn("Failed to verify OTP code: invalid response");
+			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
+			return;
+		}
+
+		auto json = jsonResult.unwrap();
+		bool granted = json["granted"].asBool().unwrapOr(false);
+
+		if (!granted) {
+			FLAlertLayer::create("GDVN Login", "Access has not been granted yet.\nPlease grant access on the website first.", "OK")->show();
+			return;
+		}
+
+		if (!json["key"].isString() || !json["player"].isString()) {
+			log::warn("Failed to verify OTP code: missing credentials");
+			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
+			return;
+		}
+
+		std::string key = json["key"].asString().unwrapOrDefault();
+		std::string player = json["player"].asString().unwrapOrDefault();
+
+		Mod::get()->setSavedValue("api-key", key);
+		Mod::get()->setSavedValue("player-name", player);
+
+		FLAlertLayer::create("GDVN Login", "You are logged in as <cg>" + player + "</c>", "OK")->show();
 	});
 }
 
@@ -121,13 +137,9 @@ void AuthService::logout() {
     req.header("Authorization", "Bearer " + getToken());
 
     m_post_holder.spawn(req.send("DELETE", url), [](web::WebResponse res) {
-        try {
-            Mod::get()->setSavedValue("api-key", std::string(""));
-            Mod::get()->setSavedValue("player-name", std::string(""));
-            FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
-        } catch (...) {
-            log::warn("Failed to logout: unexpected error");
-        }
+        Mod::get()->setSavedValue("api-key", std::string(""));
+        Mod::get()->setSavedValue("player-name", std::string(""));
+        FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
     });
 }
 
@@ -161,46 +173,54 @@ void AuthService::check() {
     req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
     m_get_holder.spawn(req.get(url), [loadingToast](web::WebResponse res) {
-        try {
-            loadingToast->hide();
+        loadingToast->hide();
 
-            if (!res.ok()) {
-                if (res.code() == 426) {
-                    auto errorToast = geode::Notification::create(
-                        "Please update GDVN mod",
-                        geode::NotificationIcon::Error,
-                        2.0f
-                    );
-
-                    errorToast->show();
-
-                    return;
-                }
-
+        if (!res.ok()) {
+            if (res.code() == 426) {
                 auto errorToast = geode::Notification::create(
-                    "Token expired. Please log back in",
+                    "Please update GDVN mod",
                     geode::NotificationIcon::Error,
                     2.0f
                 );
 
-                Mod::get()->setSavedValue("api-key", std::string(""));
-                Mod::get()->setSavedValue("player-name", std::string(""));
                 errorToast->show();
 
                 return;
             }
 
-            Mod::get()->setSavedValue("player-name", res.json().unwrap()["name"].asString().unwrap());
-
-            auto successToast = geode::Notification::create(
-            "Logged in as " + AuthService::getPlayerName(),
-                geode::NotificationIcon::Success,
+            auto errorToast = geode::Notification::create(
+                "Token expired. Please log back in",
+                geode::NotificationIcon::Error,
                 2.0f
             );
 
-            successToast->show();
-        } catch (...) {
-            log::warn("Failed to check: unexpected error");
+            Mod::get()->setSavedValue("api-key", std::string(""));
+            Mod::get()->setSavedValue("player-name", std::string(""));
+            errorToast->show();
+
+            return;
         }
+
+        auto jsonResult = res.json();
+        if (!jsonResult) {
+            log::warn("Failed to check login status: invalid response");
+            return;
+        }
+
+        auto json = jsonResult.unwrap();
+        if (!json["name"].isString()) {
+            log::warn("Failed to check login status: invalid response");
+            return;
+        }
+
+        Mod::get()->setSavedValue("player-name", json["name"].asString().unwrapOrDefault());
+
+        auto successToast = geode::Notification::create(
+        "Logged in as " + AuthService::getPlayerName(),
+            geode::NotificationIcon::Success,
+            2.0f
+        );
+
+        successToast->show();
     });
 }

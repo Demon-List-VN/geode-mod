@@ -48,31 +48,28 @@ class $modify(LevelInfoLayer) {
 					layer->release();
 				};
 
-			    try {
-					if (loadingLabel) {
-						loadingLabel->removeFromParent();
-						loadingLabel = nullptr;
-					}
-
-				    if (!res.ok()) {
-						cleanup();
-					    return;
-				    }
-
-				    auto resJson = res.json().unwrap();
-			        std::vector<std::string> labels = getListInfoLabels(resJson, isLoggedIn);
-
-			        if (!labels.empty()) {
-					    auto btn = ButtonCreator().create(labels, level, layer);
-
-					    layer->addChild(btn);
-                    }
-
+				if (!res.ok()) {
 					cleanup();
-			    } catch(...) {
+					return;
+				}
+
+				auto resJsonResult = res.json();
+				if (!resJsonResult) {
 					cleanup();
-                    log::warn("Failed to load GDVN level info for level {}", id);
-			    }
+					log::warn("Failed to load GDVN level info for level {}", id);
+					return;
+				}
+
+				auto resJson = resJsonResult.unwrap();
+				std::vector<std::string> labels = getListInfoLabels(resJson, isLoggedIn);
+
+				if (!labels.empty()) {
+					auto btn = ButtonCreator().create(labels, level, layer);
+
+					layer->addChild(btn);
+				}
+
+				cleanup();
 		    });
 	    }
 

@@ -27,30 +27,31 @@ PvpSubmitter::PvpSubmitter(int levelID, std::string playMode) : m_state(std::mak
 	req.header("Authorization", "Bearer " + APIKey);
 	std::weak_ptr<State> state = m_state;
 	m_get_holder.spawn(req.get(url), [state](web::WebResponse res) {
-		try {
-			if (!res.ok()) {
-				return;
-			}
+		if (!res.ok()) {
+			return;
+		}
 
-			auto json = res.json().unwrap();
-
-			if (json["matchId"].isNumber()) {
-				if (auto locked = state.lock()) {
-					locked->matchID = static_cast<int>(json["matchId"].asDouble().unwrap());
-					if (json["mode"].isString()) {
-						locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
-					}
-					locked->inPvp.store(locked->matchID > 0);
-					if (locked->inPvp.load()) {
-						PvpSubmitter::submitPlayMode(locked, locked->playMode);
-					}
-				}
-			}
-		} catch (...) {
+		auto jsonResult = res.json();
+		if (!jsonResult) {
 			if (auto locked = state.lock()) {
-				log::warn("Failed to check active Versus match for level {}", locked->levelID);
+				log::warn("Failed to parse active Versus match for level {}", locked->levelID);
 			} else {
-				log::warn("Failed to check active Versus match");
+				log::warn("Failed to parse active Versus match");
+			}
+			return;
+		}
+
+		auto json = jsonResult.unwrap();
+		if (json["matchId"].isNumber()) {
+			if (auto locked = state.lock()) {
+				locked->matchID = static_cast<int>(json["matchId"].asDouble().unwrapOr(0.0));
+				if (json["mode"].isString()) {
+					locked->platformer = json["mode"].asString().unwrapOrDefault() == "platformer";
+				}
+				locked->inPvp.store(locked->matchID > 0);
+				if (locked->inPvp.load()) {
+					PvpSubmitter::submitPlayMode(locked, locked->playMode);
+				}
 			}
 		}
 	});

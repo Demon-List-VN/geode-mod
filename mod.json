@@ -45,6 +45,13 @@
       "name": "Show Versus overlay",
       "description": "Show realtime Versus progress while playing an active match",
       "default": true
+    },
+    "open-pvp-chat": {
+      "type": "keybind",
+      "name": "Open Versus chat",
+      "description": "Open the Versus chat while playing or paused",
+      "default": "Enter",
+      "category": "gameplay"
     }
   }
 }

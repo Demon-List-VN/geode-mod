@@ -12,8 +12,6 @@ class $modify(GDVNCreatorLayer, CreatorLayer) {
             return false;
         }
 
-        NodeIDs::provideFor(this);
-
         auto btn = typeinfo_cast<CCMenuItemSpriteExtra*>(this->getChildByIDRecursive("versus-button"));
 
         if (!btn) {
