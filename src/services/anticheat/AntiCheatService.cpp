@@ -1,6 +1,6 @@
 #include "AntiCheatService.hpp"
 
-#include "AntiCheatConfig.hpp"
+#include "../../config.hpp"
 
 #include <optional>
 #include <string>
@@ -23,7 +23,7 @@ std::optional<std::string_view> AntiCheatService::getCheatedReason() const {
         return eclipseAntiCheat.getCheatReason();
     }
 
-    if constexpr (gdvn::anti_cheat::ENABLE_CONFIG_BASED_CHEAT_CHECKS) {
+    if constexpr (gdvn::config::ENABLE_CONFIG_BASED_CHEAT_CHECKS) {
         if (qolModAntiCheat.isCheated()) {
             return qolModAntiCheat.getCheatReason();
         }

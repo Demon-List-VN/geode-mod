@@ -5,7 +5,7 @@
 #include "../../clients/auth/AuthClient.hpp"
 #include "../../clients/level/LevelClient.hpp"
 #include "../../clients/pvp/PvpClient.hpp"
-#include "../../common.hpp"
+#include "../../config.hpp"
 #include "../auth/AuthService.hpp"
 #include "PvpSubmitterService.hpp"
 

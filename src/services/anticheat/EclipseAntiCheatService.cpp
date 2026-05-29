@@ -1,6 +1,6 @@
 #include "EclipseAntiCheatService.hpp"
 
-#include "AntiCheatConfig.hpp"
+#include "../../config.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/loader/Event.hpp>
 
@@ -114,7 +114,7 @@ bool EclipseAntiCheatService::isCheated() const {
         return true;
     }
 
-    if constexpr (gdvn::anti_cheat::ENABLE_CONFIG_BASED_CHEAT_CHECKS) {
+    if constexpr (gdvn::config::ENABLE_CONFIG_BASED_CHEAT_CHECKS) {
         if (vtable.CheckCheatsEnabled && vtable.CheckCheatsEnabled()) {
             return true;
         }

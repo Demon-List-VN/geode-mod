@@ -1,10 +1,10 @@
 #include "../auth/AuthService.hpp"
 #include "../../clients/auth/AuthClient.hpp"
-#include "../../common.hpp"
+#include "../../config.hpp"
 #include <Geode/ui/Notification.hpp>
 
 static void showOTPDialog(std::string const& code) {
-    auto grantUrl = WEBSITE_URL + "/auth/otp/" + code;
+    auto grantUrl = gdvn::config::WEBSITE_URL + "/auth/otp/" + code;
 
     geode::createQuickPopup(
         "GDVN Login",
