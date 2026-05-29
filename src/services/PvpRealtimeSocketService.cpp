@@ -1,4 +1,4 @@
-#include "PvpRealtimeSocket.hpp"
+#include "PvpRealtimeSocketService.hpp"
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -42,11 +42,11 @@ ix::SocketTLSOptions tlsOptions() {
 	return options;
 }
 
-class IxPvpRealtimeSocket final : public PvpRealtimeSocket, public std::enable_shared_from_this<IxPvpRealtimeSocket> {
+class IxPvpRealtimeSocketService final : public PvpRealtimeSocketService, public std::enable_shared_from_this<IxPvpRealtimeSocketService> {
 public:
-	explicit IxPvpRealtimeSocket(PvpRealtimeSocketDelegate* delegate) : m_delegate(delegate) {}
+	explicit IxPvpRealtimeSocketService(PvpRealtimeSocketDelegateService* delegate) : m_delegate(delegate) {}
 
-	~IxPvpRealtimeSocket() override {
+	~IxPvpRealtimeSocketService() override {
 		this->close();
 	}
 
@@ -124,7 +124,7 @@ public:
 	}
 
 private:
-	std::atomic<PvpRealtimeSocketDelegate*> m_delegate = nullptr;
+	std::atomic<PvpRealtimeSocketDelegateService*> m_delegate = nullptr;
 	std::unique_ptr<ix::WebSocket> m_socket;
 	std::atomic_bool m_open = false;
 	std::atomic_bool m_closed = false;
@@ -181,6 +181,6 @@ private:
 };
 }
 
-std::shared_ptr<PvpRealtimeSocket> PvpRealtimeSocket::create(PvpRealtimeSocketDelegate* delegate) {
-	return std::make_shared<IxPvpRealtimeSocket>(delegate);
+std::shared_ptr<PvpRealtimeSocketService> PvpRealtimeSocketService::create(PvpRealtimeSocketDelegateService* delegate) {
+	return std::make_shared<IxPvpRealtimeSocketService>(delegate);
 }

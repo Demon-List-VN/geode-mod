@@ -18,11 +18,10 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
 	src/*.cpp src/*.hpp src/*.h
 )
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES}
-        src/services/CheatGuard.cpp)
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
 if (WIN32)
-    set_source_files_properties(src/services/PvpRealtimeSocket.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+    set_source_files_properties(src/services/PvpRealtimeSocketService.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

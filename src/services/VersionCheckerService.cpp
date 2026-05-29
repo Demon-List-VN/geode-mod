@@ -1,4 +1,4 @@
-#include "VersionChecker.hpp"
+#include "VersionCheckerService.hpp"
 #include <Geode/loader/Dirs.hpp>
 #include <Geode/loader/ModMetadata.hpp>
 #include <Geode/Geode.hpp>
@@ -7,7 +7,7 @@
 #include <Geode/utils/file.hpp>
 #include <Geode/ui/Popup.hpp>
 
-async::TaskHolder<web::WebResponse> VersionChecker::m_holder;
+async::TaskHolder<web::WebResponse> VersionCheckerService::m_holder;
 
 namespace {
 	constexpr char const* UPDATE_URL = "https://github.com/Demon-List-VN/geode-mod/releases/latest/download/nampe.gdvn.geode";
@@ -21,7 +21,7 @@ namespace {
 	}
 }
 
-void VersionChecker::downloadUpdate() {
+void VersionCheckerService::downloadUpdate() {
 	auto loadingToast = geode::Notification::create(
 		"Downloading GDVN update...",
 		geode::NotificationIcon::Loading,
@@ -111,7 +111,7 @@ void VersionChecker::downloadUpdate() {
 	});
 }
 
-void VersionChecker::checkForUpdate(bool notifyIfCurrent) {
+void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
 	web::WebRequest req = web::WebRequest();
     req.userAgent("geode");
 
@@ -152,7 +152,7 @@ void VersionChecker::checkForUpdate(bool notifyIfCurrent) {
 				"Update",
 				[](auto, bool btn2) {
 					if (btn2) {
-						VersionChecker::downloadUpdate();
+						VersionCheckerService::downloadUpdate();
 					}
 				}
 			);

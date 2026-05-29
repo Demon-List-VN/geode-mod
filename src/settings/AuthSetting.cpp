@@ -1,13 +1,12 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/loader/Mod.hpp>
 
-// If you use PCH these are most likely not necessary
 #include <Geode/binding/ButtonSprite.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/FLAlertLayer.hpp>
 
 #include "../services/AuthService.hpp"
-#include "../services/VersionChecker.hpp"
+#include "../services/VersionCheckerService.hpp"
 
 using namespace geode::prelude;
 
@@ -210,7 +209,7 @@ protected:
     }
 
     void onButton(CCObject*) {
-        VersionChecker::checkForUpdate(true);
+        VersionCheckerService::checkForUpdate(true);
     }
 
     void onCommit() override {}

@@ -4,7 +4,7 @@
 #include <Geode/utils/web.hpp>
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/PlayLayer.hpp>
-#include "PvpRealtimeSocket.hpp"
+#include "PvpRealtimeSocketService.hpp"
 
 #include <cstdint>
 #include <string>
@@ -12,15 +12,15 @@
 
 using namespace geode::prelude;
 
-class PvpChatPopup;
-class PvpSubmitter;
+class PvpChatPopupService;
+class PvpSubmitterService;
 
-class PvpOverlay final : public PvpRealtimeSocketDelegate {
+class PvpOverlayService final : public PvpRealtimeSocketDelegateService {
 public:
-	explicit PvpOverlay(PlayLayer* layer, int levelID, PvpSubmitter* submitter = nullptr);
-	~PvpOverlay() override;
+	explicit PvpOverlayService(PlayLayer* layer, int levelID, PvpSubmitterService* submitter = nullptr);
+	~PvpOverlayService() override;
 
-	static PvpOverlay* getActive();
+	static PvpOverlayService* getActive();
 
 	void update(float dt);
 	void cleanup();
@@ -30,7 +30,7 @@ public:
 	bool isChatMuted() const;
 	void setChatMuted(bool muted);
 	void submitChatMessage(std::string content);
-	void notifyChatPopupClosed(PvpChatPopup* popup);
+	void notifyChatPopupClosed(PvpChatPopupService* popup);
 	std::string getChatHistoryText() const;
 	std::vector<std::string> getChatHistoryLines() const;
 
@@ -62,9 +62,9 @@ private:
 	PlayLayer* m_layer = nullptr;
 	CCLabelBMFont* m_label = nullptr;
 	CCNode* m_chatStack = nullptr;
-	PvpChatPopup* m_chatPopup = nullptr;
-	PvpSubmitter* m_submitter = nullptr;
-	std::shared_ptr<PvpRealtimeSocket> m_socket;
+	PvpChatPopupService* m_chatPopup = nullptr;
+	PvpSubmitterService* m_submitter = nullptr;
+	std::shared_ptr<PvpRealtimeSocketService> m_socket;
 	async::TaskHolder<web::WebResponse> m_matchHolder;
 	async::TaskHolder<web::WebResponse> m_tokenHolder;
 	async::TaskHolder<web::WebResponse> m_messagesHolder;

@@ -7,7 +7,7 @@
 
 using namespace geode::prelude;
 
-class RaidSubmitter {
+class EventSubmitterService {
 	struct State {
 		int levelID = 0;
 		float best = 0;
@@ -21,8 +21,8 @@ class RaidSubmitter {
 
 	void submit();
 public:
-	RaidSubmitter();
-	~RaidSubmitter();
-	RaidSubmitter(int levelID);
+	EventSubmitterService();
+	~EventSubmitterService();
+	EventSubmitterService(int levelID);
 	void record(float progress);
 };

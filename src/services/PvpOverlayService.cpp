@@ -1,7 +1,7 @@
-#include "PvpOverlay.hpp"
+#include "PvpOverlayService.hpp"
 
 #include "AuthService.hpp"
-#include "PvpSubmitter.hpp"
+#include "PvpSubmitterService.hpp"
 #include "../common.hpp"
 
 #include <Geode/binding/ButtonSprite.hpp>
@@ -33,7 +33,7 @@ constexpr int CHAT_HISTORY_VISIBLE_LINES = 8;
 constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
 constexpr int MESSAGE_FETCH_LIMIT = 100;
 
-PvpOverlay* s_activeOverlay = nullptr;
+PvpOverlayService* s_activeOverlay = nullptr;
 
 std::string trimTrailingSlash(std::string value) {
 	while (!value.empty() && value.back() == '/') {
@@ -263,10 +263,10 @@ matjson::Value const& realtimeRecord(matjson::Value const& payload) {
 }
 }
 
-class PvpChatPopup final : public Popup, public TextInputDelegate {
+class PvpChatPopupService final : public Popup, public TextInputDelegate {
 public:
-	static PvpChatPopup* create(PvpOverlay* overlay) {
-		auto ret = new PvpChatPopup();
+	static PvpChatPopupService* create(PvpOverlayService* overlay) {
+		auto ret = new PvpChatPopupService();
 		if (ret->init(overlay)) {
 			ret->autorelease();
 			return ret;
@@ -369,7 +369,7 @@ public:
 	}
 
 protected:
-	bool init(PvpOverlay* overlay) {
+	bool init(PvpOverlayService* overlay) {
 		if (!Popup::init(380.0f, 220.0f)) {
 			return false;
 		}
@@ -444,7 +444,7 @@ protected:
 	}
 
 private:
-	PvpOverlay* m_overlay = nullptr;
+	PvpOverlayService* m_overlay = nullptr;
 	TextInput* m_input = nullptr;
 	std::vector<CCLabelBMFont*> m_historyLabels;
 	CCLabelBMFont* m_statusLabel = nullptr;
@@ -471,7 +471,7 @@ private:
 	}
 };
 
-PvpOverlay::PvpOverlay(PlayLayer* layer, int levelID, PvpSubmitter* submitter) : m_layer(layer), m_submitter(submitter), m_levelID(levelID) {
+PvpOverlayService::PvpOverlayService(PlayLayer* layer, int levelID, PvpSubmitterService* submitter) : m_layer(layer), m_submitter(submitter), m_levelID(levelID) {
 	s_activeOverlay = this;
 	m_chatMuted = Mod::get()->getSavedValue<bool>("pvp-chat-muted", false);
 	this->createLabel();
@@ -479,27 +479,27 @@ PvpOverlay::PvpOverlay(PlayLayer* layer, int levelID, PvpSubmitter* submitter) :
 	this->requestMatch();
 }
 
-PvpOverlay::~PvpOverlay() {
+PvpOverlayService::~PvpOverlayService() {
 	this->cleanup();
 }
 
-PvpOverlay* PvpOverlay::getActive() {
+PvpOverlayService* PvpOverlayService::getActive() {
 	return s_activeOverlay;
 }
 
-bool PvpOverlay::isChatMuted() const {
+bool PvpOverlayService::isChatMuted() const {
 	return m_chatMuted;
 }
 
-bool PvpOverlay::hasPvpMatch() const {
+bool PvpOverlayService::hasPvpMatch() const {
 	return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
 
-bool PvpOverlay::isChatUsable() const {
+bool PvpOverlayService::isChatUsable() const {
 	return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
 
-bool PvpOverlay::openChat() {
+bool PvpOverlayService::openChat() {
 	if (!this->isChatUsable()) {
 		return false;
 	}
@@ -511,7 +511,7 @@ bool PvpOverlay::openChat() {
 		return true;
 	}
 
-	m_chatPopup = PvpChatPopup::create(this);
+	m_chatPopup = PvpChatPopupService::create(this);
 	if (!m_chatPopup) {
 		return false;
 	}
@@ -523,7 +523,7 @@ bool PvpOverlay::openChat() {
 	return true;
 }
 
-void PvpOverlay::setChatMuted(bool muted) {
+void PvpOverlayService::setChatMuted(bool muted) {
 	if (m_chatMuted == muted) {
 		return;
 	}
@@ -543,13 +543,13 @@ void PvpOverlay::setChatMuted(bool muted) {
 	this->refreshChatVisibility();
 }
 
-void PvpOverlay::notifyChatPopupClosed(PvpChatPopup* popup) {
+void PvpOverlayService::notifyChatPopupClosed(PvpChatPopupService* popup) {
 	if (m_chatPopup == popup) {
 		m_chatPopup = nullptr;
 	}
 }
 
-void PvpOverlay::createLabel() {
+void PvpOverlayService::createLabel() {
 	if (!m_layer) {
 		return;
 	}
@@ -565,7 +565,7 @@ void PvpOverlay::createLabel() {
 	this->updateLabelPosition();
 }
 
-void PvpOverlay::createChatNodes() {
+void PvpOverlayService::createChatNodes() {
 	if (!m_layer) {
 		return;
 	}
@@ -581,7 +581,7 @@ void PvpOverlay::createChatNodes() {
 	this->refreshChatVisibility();
 }
 
-void PvpOverlay::requestMatch() {
+void PvpOverlayService::requestMatch() {
 	if (!AuthService::isLoggedIn() || m_cleanedUp) {
 		return;
 	}
@@ -615,7 +615,7 @@ void PvpOverlay::requestMatch() {
 	});
 }
 
-void PvpOverlay::parseMatchSnapshot(matjson::Value const& json) {
+void PvpOverlayService::parseMatchSnapshot(matjson::Value const& json) {
 	m_matchID = static_cast<int>(getNumber(json, "matchId"));
 	m_currentUid = getString(json, "currentUid");
 	m_mode = getString(json, "mode") == "platformer" ? "platformer" : "classic";
@@ -661,7 +661,7 @@ void PvpOverlay::parseMatchSnapshot(matjson::Value const& json) {
 	}
 }
 
-void PvpOverlay::requestRealtimeToken() {
+void PvpOverlayService::requestRealtimeToken() {
 	if (m_cleanedUp || m_requestingRealtimeToken) {
 		return;
 	}
@@ -699,7 +699,7 @@ void PvpOverlay::requestRealtimeToken() {
 	});
 }
 
-void PvpOverlay::requestMessages(bool animateNew, bool incremental) {
+void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 	if (!AuthService::isLoggedIn() || m_cleanedUp || m_matchID <= 0) {
 		return;
 	}
@@ -748,7 +748,7 @@ void PvpOverlay::requestMessages(bool animateNew, bool incremental) {
 	});
 }
 
-void PvpOverlay::submitChatMessage(std::string content) {
+void PvpOverlayService::submitChatMessage(std::string content) {
 	if (!this->isChatUsable() || m_chatSending || m_matchID <= 0) {
 		if (m_chatPopup) {
 			m_chatPopup->setSending(false);
@@ -810,11 +810,11 @@ void PvpOverlay::submitChatMessage(std::string content) {
 	});
 }
 
-bool PvpOverlay::isReadyForRealtime() const {
+bool PvpOverlayService::isReadyForRealtime() const {
 	return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
 
-void PvpOverlay::connectRealtime() {
+void PvpOverlayService::connectRealtime() {
 	if (!this->isReadyForRealtime() || m_supabaseUrl.empty() || m_anonKey.empty() || m_socket) {
 		return;
 	}
@@ -824,7 +824,7 @@ void PvpOverlay::connectRealtime() {
 	m_heartbeatTimer = 0.0f;
 	m_topic = "realtime:gdvn-pvp-" + std::to_string(m_matchID);
 
-	auto socket = PvpRealtimeSocket::create(this);
+	auto socket = PvpRealtimeSocketService::create(this);
 	auto url = realtimeUrl(m_supabaseUrl, m_anonKey);
 
 	if (!socket->connect(url)) {
@@ -836,7 +836,7 @@ void PvpOverlay::connectRealtime() {
 	m_socket = socket;
 }
 
-void PvpOverlay::onRealtimeOpen() {
+void PvpOverlayService::onRealtimeOpen() {
 	if (!m_socket || m_cleanedUp) {
 		return;
 	}
@@ -846,7 +846,7 @@ void PvpOverlay::onRealtimeOpen() {
 	this->sendJoin();
 }
 
-void PvpOverlay::onRealtimeMessage(std::string const& message) {
+void PvpOverlayService::onRealtimeMessage(std::string const& message) {
 	if (!m_socket || m_cleanedUp || message.empty()) {
 		return;
 	}
@@ -860,7 +860,7 @@ void PvpOverlay::onRealtimeMessage(std::string const& message) {
 	this->handleRealtimeMessage(json.unwrap());
 }
 
-void PvpOverlay::onRealtimeClose() {
+void PvpOverlayService::onRealtimeClose() {
 	m_socket.reset();
 	m_connecting = false;
 	m_joined = false;
@@ -870,7 +870,7 @@ void PvpOverlay::onRealtimeClose() {
 	}
 }
 
-void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
+void PvpOverlayService::handleRealtimeMessage(matjson::Value const& json) {
 	auto event = getString(json, "event");
 
 	if (event == "phx_reply") {
@@ -917,7 +917,7 @@ void PvpOverlay::handleRealtimeMessage(matjson::Value const& json) {
 		}
 	}
 
-void PvpOverlay::handleResultRow(matjson::Value const& row) {
+void PvpOverlayService::handleResultRow(matjson::Value const& row) {
 	auto uid = getString(row, "uid");
 	auto progress = getNumber(row, "progress");
 
@@ -938,7 +938,7 @@ void PvpOverlay::handleResultRow(matjson::Value const& row) {
 	}
 }
 
-void PvpOverlay::handleMatchRow(matjson::Value const& row) {
+void PvpOverlayService::handleMatchRow(matjson::Value const& row) {
 	const bool wasActive = m_active;
 	if (getString(row, "mode") == "platformer") {
 		m_mode = "platformer";
@@ -964,7 +964,7 @@ void PvpOverlay::handleMatchRow(matjson::Value const& row) {
 	}
 }
 
-void PvpOverlay::scheduleMessageRefresh() {
+void PvpOverlayService::scheduleMessageRefresh() {
 	if (m_cleanedUp || m_matchID <= 0) {
 		return;
 	}
@@ -972,7 +972,7 @@ void PvpOverlay::scheduleMessageRefresh() {
 	m_messageRefreshTimer = MESSAGE_REFRESH_COALESCE;
 }
 
-void PvpOverlay::handleMessagesPayload(matjson::Value const& json, bool animateNew) {
+void PvpOverlayService::handleMessagesPayload(matjson::Value const& json, bool animateNew) {
 	if (json.isArray()) {
 		for (auto const& message : json.asArray().unwrap()) {
 			this->handleMessageRow(message, animateNew);
@@ -994,7 +994,7 @@ void PvpOverlay::handleMessagesPayload(matjson::Value const& json, bool animateN
 	}
 }
 
-void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
+void PvpOverlayService::handleMessageRow(matjson::Value const& row, bool animateNew) {
 	ChatMessage message;
 	message.id = getInteger(row, "id");
 	message.senderUid = getString(row, "senderUid");
@@ -1065,7 +1065,7 @@ void PvpOverlay::handleMessageRow(matjson::Value const& row, bool animateNew) {
 	}
 }
 
-void PvpOverlay::handleSystemMetadata(matjson::Value const& metadata) {
+void PvpOverlayService::handleSystemMetadata(matjson::Value const& metadata) {
 	if (!metadata.isObject()) {
 		return;
 	}
@@ -1101,7 +1101,7 @@ void PvpOverlay::handleSystemMetadata(matjson::Value const& metadata) {
 	this->refreshLabel();
 }
 
-std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) const {
+std::string PvpOverlayService::formatSystemMessage(matjson::Value const& metadata) const {
 	if (!metadata.isObject()) {
 		return "Match update.";
 	}
@@ -1167,12 +1167,12 @@ std::string PvpOverlay::formatSystemMessage(matjson::Value const& metadata) cons
 	return "Match update.";
 }
 
-std::string PvpOverlay::formatPlayerLabel(std::string const& label, PlayerProgress const& player) const {
+std::string PvpOverlayService::formatPlayerLabel(std::string const& label, PlayerProgress const& player) const {
 	auto modeSuffix = player.playMode == "practice" ? " (practice)" : "";
 	return fmt::format("{}{}: {}", label, modeSuffix, formatProgressLabel(player.progress));
 }
 
-std::string PvpOverlay::getChatHistoryText() const {
+std::string PvpOverlayService::getChatHistoryText() const {
 	auto lines = this->getChatHistoryLines();
 	std::string text;
 
@@ -1186,7 +1186,7 @@ std::string PvpOverlay::getChatHistoryText() const {
 	return text;
 }
 
-std::vector<std::string> PvpOverlay::getChatHistoryLines() const {
+std::vector<std::string> PvpOverlayService::getChatHistoryLines() const {
 	std::vector<std::string> lines;
 	lines.reserve(m_chatMessages.size());
 
@@ -1198,7 +1198,7 @@ std::vector<std::string> PvpOverlay::getChatHistoryLines() const {
 	return lines;
 }
 
-std::string PvpOverlay::getChatSenderLabel(ChatMessage const& message) const {
+std::string PvpOverlayService::getChatSenderLabel(ChatMessage const& message) const {
 	if (message.type == "system") {
 		return "System";
 	}
@@ -1210,7 +1210,7 @@ std::string PvpOverlay::getChatSenderLabel(ChatMessage const& message) const {
 	return "Opponent";
 }
 
-void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
+void PvpOverlayService::pushRecentMessage(ChatMessage const& message) {
 	if (!m_chatStack || m_chatMuted) {
 		return;
 	}
@@ -1248,7 +1248,7 @@ void PvpOverlay::pushRecentMessage(ChatMessage const& message) {
 	this->refreshChatVisibility();
 }
 
-void PvpOverlay::layoutRecentMessages() {
+void PvpOverlayService::layoutRecentMessages() {
 	for (size_t i = 0; i < m_recentMessages.size(); ++i) {
 		if (auto label = m_recentMessages[i].label) {
 			auto reverseIndex = m_recentMessages.size() - i - 1;
@@ -1257,7 +1257,7 @@ void PvpOverlay::layoutRecentMessages() {
 	}
 }
 
-void PvpOverlay::updateRecentMessages(float dt) {
+void PvpOverlayService::updateRecentMessages(float dt) {
 	if (m_recentMessages.empty()) {
 		return;
 	}
@@ -1287,7 +1287,7 @@ void PvpOverlay::updateRecentMessages(float dt) {
 	this->refreshChatVisibility();
 }
 
-void PvpOverlay::sendJoin() {
+void PvpOverlayService::sendJoin() {
 	auto changes = matjson::Value::array();
 	auto matchID = std::to_string(m_matchID);
 	changes.push(makeChange("INSERT", "pvpMatchResults", "matchId=eq." + matchID));
@@ -1325,7 +1325,7 @@ void PvpOverlay::sendJoin() {
 	this->sendJson(message);
 }
 
-void PvpOverlay::sendHeartbeat() {
+void PvpOverlayService::sendHeartbeat() {
 	auto message = matjson::Value::object();
 	message["topic"] = "phoenix";
 	message["event"] = "heartbeat";
@@ -1334,7 +1334,7 @@ void PvpOverlay::sendHeartbeat() {
 	this->sendJson(message);
 }
 
-void PvpOverlay::sendJson(matjson::Value const& json) {
+void PvpOverlayService::sendJson(matjson::Value const& json) {
 	if (!m_socket || !m_socket->isOpen()) {
 		return;
 	}
@@ -1342,11 +1342,11 @@ void PvpOverlay::sendJson(matjson::Value const& json) {
 	m_socket->send(json.dump(matjson::NO_INDENTATION));
 }
 
-std::string PvpOverlay::nextRef() {
+std::string PvpOverlayService::nextRef() {
 	return std::to_string(m_ref++);
 }
 
-void PvpOverlay::update(float dt) {
+void PvpOverlayService::update(float dt) {
 	if (m_cleanedUp) {
 		return;
 	}
@@ -1414,7 +1414,7 @@ void PvpOverlay::update(float dt) {
 	}
 }
 
-void PvpOverlay::scheduleReconnect() {
+void PvpOverlayService::scheduleReconnect() {
 	if (m_cleanedUp || !m_chatOpen || m_connecting) {
 		return;
 	}
@@ -1423,7 +1423,7 @@ void PvpOverlay::scheduleReconnect() {
 	m_reconnectTimer = static_cast<float>(std::min(1 << (m_reconnectAttempts - 1), 10));
 }
 
-void PvpOverlay::closeSocket() {
+void PvpOverlayService::closeSocket() {
 	if (!m_socket) {
 		return;
 	}
@@ -1435,7 +1435,7 @@ void PvpOverlay::closeSocket() {
 	socket->close();
 }
 
-void PvpOverlay::cleanup() {
+void PvpOverlayService::cleanup() {
 	if (m_cleanedUp) {
 		return;
 	}
@@ -1468,7 +1468,7 @@ void PvpOverlay::cleanup() {
 
 }
 
-void PvpOverlay::refreshLabel() {
+void PvpOverlayService::refreshLabel() {
 	if (!m_label) {
 		return;
 	}
@@ -1491,7 +1491,7 @@ void PvpOverlay::refreshLabel() {
 	this->updateLabelPosition();
 }
 
-void PvpOverlay::refreshChatVisibility() {
+void PvpOverlayService::refreshChatVisibility() {
 	auto visible = m_chatOpen && !m_cleanedUp;
 
 	if (!visible && m_chatPopup) {
@@ -1505,7 +1505,7 @@ void PvpOverlay::refreshChatVisibility() {
 
 }
 
-void PvpOverlay::updateLabelPosition() {
+void PvpOverlayService::updateLabelPosition() {
 	if (!m_label) {
 		return;
 	}
@@ -1515,30 +1515,30 @@ void PvpOverlay::updateLabelPosition() {
 	m_label->setPosition({ LABEL_MARGIN, size.height - LABEL_MARGIN });
 }
 
-void PvpOverlay::updateChatPositions() {
+void PvpOverlayService::updateChatPositions() {
 	if (m_chatStack) {
 		m_chatStack->setPosition({ CHAT_MARGIN, CHAT_MARGIN });
 	}
 }
 
-void PvpOverlay::setOverlayVisible(bool visible) {
+void PvpOverlayService::setOverlayVisible(bool visible) {
 	if (m_label) {
 		m_label->setVisible(visible && Mod::get()->getSettingValue<bool>("show-pvp-overlay"));
 	}
 }
 
-bool PvpOverlay::isActiveStatus(std::string const& status) const {
+bool PvpOverlayService::isActiveStatus(std::string const& status) const {
 	return status == "in_progress" || status == "waiting_result";
 }
 
-bool PvpOverlay::isCompletedStatus(std::string const& status) const {
+bool PvpOverlayService::isCompletedStatus(std::string const& status) const {
 	return status == "completed";
 }
 
-bool PvpOverlay::isPlatformerMode() const {
+bool PvpOverlayService::isPlatformerMode() const {
 	return m_mode == "platformer";
 }
 
-std::string PvpOverlay::formatProgressLabel(float progress) const {
+std::string PvpOverlayService::formatProgressLabel(float progress) const {
 	return formatProgressForMode(progress, m_mode);
 }

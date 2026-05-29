@@ -3,7 +3,7 @@
 #include <optional>
 #include <string_view>
 
-class CheatGuard {
+class CheatGuardService {
 public:
 	static bool isGameplayCheated();
 	static std::optional<std::string_view> getGameplayCheatReason();

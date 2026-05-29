@@ -5,7 +5,7 @@
 
 using namespace geode::prelude;
 
-class VersionChecker {
+class VersionCheckerService {
 	static async::TaskHolder<web::WebResponse> m_holder;
 	static void downloadUpdate();
 public:

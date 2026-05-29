@@ -9,7 +9,7 @@
 
 using namespace geode::prelude;
 
-class PvpSubmitter {
+class PvpSubmitterService {
 	struct State {
 		int levelID = 0;
 		int matchID = 0;
@@ -34,9 +34,9 @@ class PvpSubmitter {
 	static size_t sumDeathCount(std::array<size_t, 100> const& count);
 
 public:
-	PvpSubmitter();
-	~PvpSubmitter();
-	PvpSubmitter(int levelID, std::string playMode = "normal");
+	PvpSubmitterService();
+	~PvpSubmitterService();
+	PvpSubmitterService(int levelID, std::string playMode = "normal");
 	bool isPlatformerPvp() const;
 	void submitPlayMode(std::string const& playMode);
 	void record(float progress);

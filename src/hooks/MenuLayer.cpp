@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
-#include "../services/VersionChecker.hpp"
+#include "../services/VersionCheckerService.hpp"
 #include "../services/AuthService.hpp"
 
 using namespace geode::prelude;
@@ -22,7 +22,7 @@ class $modify(MenuLayer) {
 
 		if (!hasChecked) {
 			hasChecked = true;
-			VersionChecker::checkForUpdate();
+			VersionCheckerService::checkForUpdate();
 		    AuthService::check();
 		}
 

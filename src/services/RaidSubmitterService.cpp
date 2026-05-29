@@ -1,17 +1,17 @@
-#include "RaidSubmitter.hpp"
+#include "RaidSubmitterService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> RaidSubmitter::m_get_holder, RaidSubmitter::m_put_holder;
+async::TaskHolder<web::WebResponse> RaidSubmitterService::m_get_holder, RaidSubmitterService::m_put_holder;
 
-RaidSubmitter::RaidSubmitter() : m_state(std::make_shared<State>()) {}
+RaidSubmitterService::RaidSubmitterService() : m_state(std::make_shared<State>()) {}
 
-RaidSubmitter::~RaidSubmitter() = default;
+RaidSubmitterService::~RaidSubmitterService() = default;
 
-RaidSubmitter::RaidSubmitter(int levelID) : m_state(std::make_shared<State>(levelID)) {
+RaidSubmitterService::RaidSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent?type=raid";
 	std::string APIKey = AuthService::getToken();
@@ -25,7 +25,7 @@ RaidSubmitter::RaidSubmitter(int levelID) : m_state(std::make_shared<State>(leve
 	});
 }
 
-void RaidSubmitter::submit() {
+void RaidSubmitterService::submit() {
 	if (!m_state || !m_state->inEvent.load()) {
 		return;
 	}
@@ -38,7 +38,7 @@ void RaidSubmitter::submit() {
 	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
-void RaidSubmitter::record(float progress) {
+void RaidSubmitterService::record(float progress) {
 	if (!m_state) {
 		return;
 	}

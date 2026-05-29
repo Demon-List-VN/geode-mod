@@ -1,4 +1,4 @@
-#include "PvpSubmitter.hpp"
+#include "PvpSubmitterService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <algorithm>
@@ -7,13 +7,13 @@
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> PvpSubmitter::m_get_holder, PvpSubmitter::m_put_holder, PvpSubmitter::m_death_holder, PvpSubmitter::m_mode_holder;
+async::TaskHolder<web::WebResponse> PvpSubmitterService::m_get_holder, PvpSubmitterService::m_put_holder, PvpSubmitterService::m_death_holder, PvpSubmitterService::m_mode_holder;
 
-PvpSubmitter::PvpSubmitter() : m_state(std::make_shared<State>()) {}
+PvpSubmitterService::PvpSubmitterService() : m_state(std::make_shared<State>()) {}
 
-PvpSubmitter::~PvpSubmitter() = default;
+PvpSubmitterService::~PvpSubmitterService() = default;
 
-PvpSubmitter::PvpSubmitter(int levelID, std::string playMode) : m_state(std::make_shared<State>(levelID)) {
+PvpSubmitterService::PvpSubmitterService(int levelID, std::string playMode) : m_state(std::make_shared<State>(levelID)) {
 	m_state->playMode = playMode == "practice" ? "practice" : "normal";
 
 	if (!AuthService::isLoggedIn()) {
@@ -50,14 +50,14 @@ PvpSubmitter::PvpSubmitter(int levelID, std::string playMode) : m_state(std::mak
 				}
 				locked->inPvp.store(locked->matchID > 0);
 				if (locked->inPvp.load()) {
-					PvpSubmitter::submitPlayMode(locked, locked->playMode);
+					PvpSubmitterService::submitPlayMode(locked, locked->playMode);
 				}
 			}
 		}
 	});
 }
 
-void PvpSubmitter::submitPlayMode(std::shared_ptr<State> state, std::string const& playMode) {
+void PvpSubmitterService::submitPlayMode(std::shared_ptr<State> state, std::string const& playMode) {
 	if (!state || !state->inPvp.load() || state->matchID <= 0) {
 		return;
 	}
@@ -81,7 +81,7 @@ void PvpSubmitter::submitPlayMode(std::shared_ptr<State> state, std::string cons
 	});
 }
 
-void PvpSubmitter::submit(bool completed) {
+void PvpSubmitterService::submit(bool completed) {
 	if (!m_state || !m_state->inPvp.load() || m_state->matchID <= 0) {
 		return;
 	}
@@ -97,7 +97,7 @@ void PvpSubmitter::submit(bool completed) {
 	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
-void PvpSubmitter::submitDeathCount(std::shared_ptr<State> state) {
+void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
 	if (!state || !state->inPvp.load() || state->platformer || state->matchID <= 0) {
 		return;
 	}
@@ -127,14 +127,14 @@ void PvpSubmitter::submitDeathCount(std::shared_ptr<State> state) {
 			}
 			locked->deathSubmitInFlight.store(false);
 
-			if (res.ok() && PvpSubmitter::sumDeathCount(locked->pendingDeathCount) >= 100) {
-				PvpSubmitter::submitDeathCount(locked);
+			if (res.ok() && PvpSubmitterService::sumDeathCount(locked->pendingDeathCount) >= 100) {
+				PvpSubmitterService::submitDeathCount(locked);
 			}
 		}
 	});
 }
 
-std::string PvpSubmitter::serializeDeathCount(std::array<size_t, 100> const& count) {
+std::string PvpSubmitterService::serializeDeathCount(std::array<size_t, 100> const& count) {
 	std::string res;
 
 	for (size_t value : count) {
@@ -148,7 +148,7 @@ std::string PvpSubmitter::serializeDeathCount(std::array<size_t, 100> const& cou
 	return res;
 }
 
-size_t PvpSubmitter::sumDeathCount(std::array<size_t, 100> const& count) {
+size_t PvpSubmitterService::sumDeathCount(std::array<size_t, 100> const& count) {
 	size_t total = 0;
 	for (size_t value : count) {
 		total += value;
@@ -156,11 +156,11 @@ size_t PvpSubmitter::sumDeathCount(std::array<size_t, 100> const& count) {
 	return total;
 }
 
-bool PvpSubmitter::isPlatformerPvp() const {
+bool PvpSubmitterService::isPlatformerPvp() const {
 	return m_state && m_state->inPvp.load() && m_state->platformer;
 }
 
-void PvpSubmitter::submitPlayMode(std::string const& playMode) {
+void PvpSubmitterService::submitPlayMode(std::string const& playMode) {
 	if (!m_state) {
 		return;
 	}
@@ -169,7 +169,7 @@ void PvpSubmitter::submitPlayMode(std::string const& playMode) {
 	submitPlayMode(m_state, m_state->playMode);
 }
 
-void PvpSubmitter::record(float progress) {
+void PvpSubmitterService::record(float progress) {
 	if (!m_state || m_state->platformer || progress <= m_state->best) {
 		return;
 	}
@@ -178,7 +178,7 @@ void PvpSubmitter::record(float progress) {
 	submit();
 }
 
-void PvpSubmitter::recordDeath(float progress) {
+void PvpSubmitterService::recordDeath(float progress) {
 	if (
 		!m_state ||
 		!m_state->inPvp.load() ||
@@ -204,11 +204,11 @@ void PvpSubmitter::recordDeath(float progress) {
 	}
 }
 
-void PvpSubmitter::flushDeathCount() {
+void PvpSubmitterService::flushDeathCount() {
 	submitDeathCount(m_state);
 }
 
-void PvpSubmitter::recordCheckpoint(int count) {
+void PvpSubmitterService::recordCheckpoint(int count) {
 	if (!m_state || !m_state->platformer || count <= m_state->best) {
 		return;
 	}
@@ -217,7 +217,7 @@ void PvpSubmitter::recordCheckpoint(int count) {
 	submit();
 }
 
-void PvpSubmitter::completePlatformer(int count) {
+void PvpSubmitterService::completePlatformer(int count) {
 	if (!m_state || !m_state->platformer) {
 		return;
 	}

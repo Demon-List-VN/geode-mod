@@ -1,17 +1,17 @@
-#include "EventSubmitter.hpp"
+#include "EventSubmitterService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> EventSubmitter::m_get_holder, EventSubmitter::m_put_holder;
+async::TaskHolder<web::WebResponse> EventSubmitterService::m_get_holder, EventSubmitterService::m_put_holder;
 
-EventSubmitter::EventSubmitter() : m_state(std::make_shared<State>()) {}
+EventSubmitterService::EventSubmitterService() : m_state(std::make_shared<State>()) {}
 
-EventSubmitter::~EventSubmitter() = default;
+EventSubmitterService::~EventSubmitterService() = default;
 
-EventSubmitter::EventSubmitter(int levelID) : m_state(std::make_shared<State>(levelID)) {
+EventSubmitterService::EventSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	web::WebRequest req = web::WebRequest();
 	std::string url = API_URL + "/levels/" + std::to_string(levelID) + "/inEvent";
 	std::string APIKey = AuthService::getToken();
@@ -25,7 +25,7 @@ EventSubmitter::EventSubmitter(int levelID) : m_state(std::make_shared<State>(le
 	});
 }
 
-void EventSubmitter::submit() {
+void EventSubmitterService::submit() {
 	if (!m_state || !m_state->inEvent.load()) {
 		return;
 	}
@@ -38,7 +38,7 @@ void EventSubmitter::submit() {
 	m_put_holder.spawn(req.put(url), [](web::WebResponse res) {});
 }
 
-void EventSubmitter::record(float progress) {
+void EventSubmitterService::record(float progress) {
 	if (!m_state || progress <= m_state->best) {
 		return;
 	}

@@ -6,13 +6,13 @@
 #include <memory>
 #include <string>
 #include <unordered_set>
-#include "../services/AttemptCounter.hpp"
-#include "../services/DeathCounter.hpp"
-#include "../services/EventSubmitter.hpp"
-#include "../services/RaidSubmitter.hpp"
-#include "../services/PvpSubmitter.hpp"
-#include "../services/PvpOverlay.hpp"
-#include "../services/CheatGuard.hpp"
+#include "../services/AttemptCounterService.hpp"
+#include "../services/DeathCounterService.hpp"
+#include "../services/EventSubmitterService.hpp"
+#include "../services/RaidSubmitterService.hpp"
+#include "../services/PvpSubmitterService.hpp"
+#include "../services/PvpOverlayService.hpp"
+#include "../services/CheatGuardService.hpp"
 #include "../services/AuthService.hpp"
 
 using namespace geode::prelude;
@@ -22,12 +22,12 @@ class $modify(DTPlayLayer, PlayLayer) {
 		bool hasRespawned = false;
 		bool isCheatedRun = false;
 		std::string cheatReason;
-		AttemptCounter attemptCounter;
-		DeathCounter deathCounter;
-		std::unique_ptr<EventSubmitter> eventSubmitter;
-		std::unique_ptr<RaidSubmitter> raidSubmitter;
-		std::unique_ptr<PvpSubmitter> pvpSubmitter;
-		std::unique_ptr<PvpOverlay> pvpOverlay;
+		AttemptCounterService attemptCounter;
+		DeathCounterService deathCounter;
+		std::unique_ptr<EventSubmitterService> eventSubmitter;
+		std::unique_ptr<RaidSubmitterService> raidSubmitter;
+		std::unique_ptr<PvpSubmitterService> pvpSubmitter;
+		std::unique_ptr<PvpOverlayService> pvpOverlay;
 		std::unordered_set<int> platformerCheckpointIds;
 		int platformerCheckpointCount = 0;
 		bool lastPracticeMode = false;
@@ -70,7 +70,7 @@ class $modify(DTPlayLayer, PlayLayer) {
 			return;
 		}
 
-		if (auto reason = CheatGuard::getGameplayCheatReason()) {
+		if (auto reason = CheatGuardService::getGameplayCheatReason()) {
 			markRunCheated(std::string(*reason));
 		}
 	}
@@ -99,18 +99,18 @@ class $modify(DTPlayLayer, PlayLayer) {
 		int id = level->m_levelID.value();
 		auto best = level->m_normalPercent.value();
 
-		m_fields->deathCounter = DeathCounter(id, best >= 100);
-		m_fields->eventSubmitter = std::make_unique<EventSubmitter>(id);
-		m_fields->raidSubmitter = std::make_unique<RaidSubmitter>(id);
+		m_fields->deathCounter = DeathCounterService(id, best >= 100);
+		m_fields->eventSubmitter = std::make_unique<EventSubmitterService>(id);
+		m_fields->raidSubmitter = std::make_unique<RaidSubmitterService>(id);
 		m_fields->lastPracticeMode = m_isPracticeMode;
-		m_fields->pvpSubmitter = std::make_unique<PvpSubmitter>(
+		m_fields->pvpSubmitter = std::make_unique<PvpSubmitterService>(
 			id,
 			m_isPracticeMode ? "practice" : "normal"
 		);
 		refreshCheatGuardReason();
 
 		if (AuthService::isLoggedIn() && !m_isPracticeMode) {
-			m_fields->pvpOverlay = std::make_unique<PvpOverlay>(this, id, m_fields->pvpSubmitter.get());
+			m_fields->pvpOverlay = std::make_unique<PvpOverlayService>(this, id, m_fields->pvpSubmitter.get());
 		}
 
 		return true;

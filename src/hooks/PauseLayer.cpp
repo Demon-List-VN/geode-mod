@@ -3,7 +3,7 @@
 #include <Geode/modify/PauseLayer.hpp> // DO NOT REMOVE
 #include <Geode/loader/SettingV3.hpp>
 
-#include "../services/PvpOverlay.hpp"
+#include "../services/PvpOverlayService.hpp"
 
 using namespace geode::prelude;
 
@@ -13,7 +13,7 @@ $on_mod(Loaded) {
 			return false;
 		}
 
-		auto overlay = PvpOverlay::getActive();
+		auto overlay = PvpOverlayService::getActive();
 		return overlay && overlay->openChat();
 	});
 }
@@ -22,7 +22,7 @@ class $modify(GDVNPauseLayer, PauseLayer) {
 	void customSetup() override {
 		PauseLayer::customSetup();
 
-		auto overlay = PvpOverlay::getActive();
+		auto overlay = PvpOverlayService::getActive();
 		if (!overlay || !overlay->hasPvpMatch()) {
 			return;
 		}
@@ -36,7 +36,7 @@ class $modify(GDVNPauseLayer, PauseLayer) {
 		auto chatSprite = ButtonSprite::create("Chat", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		chatSprite->setScale(0.55f);
 		auto chatButton = CCMenuItemExt::createSpriteExtra(chatSprite, [](auto*) {
-			if (auto overlay = PvpOverlay::getActive()) {
+			if (auto overlay = PvpOverlayService::getActive()) {
 				overlay->openChat();
 			}
 		});
@@ -55,7 +55,7 @@ class $modify(GDVNPauseLayer, PauseLayer) {
 	}
 
 	void onGDVNMuteChat(CCObject*) {
-		auto overlay = PvpOverlay::getActive();
+		auto overlay = PvpOverlayService::getActive();
 		if (!overlay) {
 			auto muted = !Mod::get()->getSavedValue<bool>("pvp-chat-muted", false);
 			Mod::get()->setSavedValue<bool>("pvp-chat-muted", muted);

@@ -1,4 +1,4 @@
-#include "CheatGuard.hpp"
+#include "CheatGuardService.hpp"
 
 #include <array>
 #include <cmath>
@@ -294,11 +294,11 @@ namespace {
 
 }
 
-bool CheatGuard::isGameplayCheated() {
-	return CheatGuard::getGameplayCheatReason().has_value();
+bool CheatGuardService::isGameplayCheated() {
+	return CheatGuardService::getGameplayCheatReason().has_value();
 }
 
-std::optional<std::string_view> CheatGuard::getGameplayCheatReason() {
+std::optional<std::string_view> CheatGuardService::getGameplayCheatReason() {
 	if (isStartPositionRun()) {
 		return "start position";
 	}

@@ -1,17 +1,17 @@
-#include "AttemptCounter.hpp"
+#include "AttemptCounterService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> AttemptCounter::m_holder;
+async::TaskHolder<web::WebResponse> AttemptCounterService::m_holder;
 
-void AttemptCounter::add() {
+void AttemptCounterService::add() {
 	cnt++;
 }
 
-void AttemptCounter::submit() {
+void AttemptCounterService::submit() {
 	using namespace geode::prelude;
 
 	auto APIKey = AuthService::getToken();

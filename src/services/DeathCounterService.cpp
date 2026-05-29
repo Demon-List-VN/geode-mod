@@ -1,23 +1,23 @@
-#include "DeathCounter.hpp"
+#include "DeathCounterService.hpp"
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 
 #include "AuthService.hpp"
 #include "../common.hpp"
 
-async::TaskHolder<web::WebResponse> DeathCounter::m_holder;
+async::TaskHolder<web::WebResponse> DeathCounterService::m_holder;
 
-DeathCounter::DeathCounter() {}
+DeathCounterService::DeathCounterService() {}
 
-DeathCounter::DeathCounter(int id, bool completed) {
+DeathCounterService::DeathCounterService(int id, bool completed) {
 	deathData = DeathData(id, completed, {});
 }
 
-void DeathCounter::add(int percent) {
+void DeathCounterService::add(int percent) {
 	deathData.addDeathCount(percent);
 }
 
-void DeathCounter::submit() {
+void DeathCounterService::submit() {
 	using namespace geode::prelude;
 
 	auto APIKey = AuthService::getToken();
