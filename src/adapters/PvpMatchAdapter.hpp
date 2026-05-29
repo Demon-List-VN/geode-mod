@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../consts/PvpWebsocketEventConst.hpp"
 #include "../dtos/pvp/match/PvpMatchPlayerProgressDto.hpp"
 #include "../dtos/pvp/match/PvpMatchRealtimeMessageDto.hpp"
 #include "../dtos/pvp/match/PvpMatchRowDto.hpp"
@@ -47,27 +48,29 @@ class PvpMatchAdapter {
     static PvpMatchRealtimeMessageDto realtimeMessageFromJson(matjson::Value const& json) {
         PvpMatchRealtimeMessageDto dto;
         dto.valid = true;
-        dto.event = getString(json, "event");
+        dto.event = getString(json, gdvn::consts::PvpWebsocketEvent::EVENT);
 
-        if (dto.event == "phx_reply") {
-            dto.replyOk = getString(json["payload"], "status") == "ok";
+        if (dto.event == gdvn::consts::PvpWebsocketEvent::PHX_REPLY) {
+            dto.replyOk =
+                getString(json[gdvn::consts::PvpWebsocketEvent::PAYLOAD], gdvn::consts::PvpWebsocketEvent::STATUS) ==
+                "ok";
             return dto;
         }
 
-        if (dto.event != "postgres_changes") {
+        if (dto.event != gdvn::consts::PvpWebsocketEvent::POSTGRES_CHANGES) {
             return dto;
         }
 
-        auto const& payload = json["payload"];
-        auto const& data = payload["data"];
-        dto.table = getString(data, "table");
+        auto const& payload = json[gdvn::consts::PvpWebsocketEvent::PAYLOAD];
+        auto const& data = payload[gdvn::consts::PvpWebsocketEvent::DATA];
+        dto.table = getString(data, gdvn::consts::PvpWebsocketEvent::TABLE);
         if (dto.table.empty()) {
-            dto.table = getString(payload, "table");
+            dto.table = getString(payload, gdvn::consts::PvpWebsocketEvent::TABLE);
         }
 
         dto.row = realtimeRecord(payload);
         if (dto.table.empty() && dto.row["matchId"].isNumber() && dto.row["content"].isString()) {
-            dto.table = "pvpMatchMessages";
+            dto.table = gdvn::consts::PvpWebsocketEvent::MESSAGE_TABLE;
         }
 
         dto.rowMatchID = getInteger(dto.row, "matchId");
@@ -146,7 +149,7 @@ class PvpMatchAdapter {
     }
 
     static matjson::Value const& realtimeRecord(matjson::Value const& payload) {
-        auto const& data = payload["data"];
+        auto const& data = payload[gdvn::consts::PvpWebsocketEvent::DATA];
 
         if (data["record"].isObject()) {
             return data["record"];

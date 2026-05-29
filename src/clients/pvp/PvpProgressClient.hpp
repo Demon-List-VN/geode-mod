@@ -15,4 +15,7 @@ class PvpProgressClient {
 
     static void postHeatmap(size_t count, Callback callback);
     static void postDeathCount(int levelID, std::string const& count, bool completed, Callback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_postHolder;
 };

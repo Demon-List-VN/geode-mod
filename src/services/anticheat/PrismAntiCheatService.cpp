@@ -10,9 +10,8 @@
 
 namespace {
 
-constexpr float FLOAT_EPSILON = 0.001f;
-
 bool differsFrom(float value, float expected) {
+    constexpr float FLOAT_EPSILON = 0.001f;
     return std::abs(value - expected) > FLOAT_EPSILON;
 }
 

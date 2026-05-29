@@ -29,6 +29,8 @@ class PvpWebsocketClient final : public WebsocketClient {
     void close() override;
 
   private:
+    static constexpr float HEARTBEAT_INTERVAL = 25.0f;
+
     Callbacks m_callbacks;
     int m_matchID = 0;
     int m_ref = 1;

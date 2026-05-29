@@ -24,6 +24,11 @@ class PvpRecentChatStack {
     void cleanup();
 
   private:
+    static constexpr float CHAT_MARGIN = 8.0f;
+    static constexpr float CHAT_MESSAGE_LIFETIME = 8.0f;
+    static constexpr float CHAT_FADE_TIME = 1.5f;
+    static constexpr int MAX_RECENT_MESSAGES = 4;
+
     CCNode* m_stack = nullptr;
     std::vector<PvpOverlayRecentChatMessageModel> m_messages;
     std::vector<CCLabelBMFont*> m_labels;

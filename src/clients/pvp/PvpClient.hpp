@@ -23,4 +23,9 @@ class PvpClient {
     static void postDeathCount(int matchID, std::string const& count, Callback callback);
     static void getMessages(int matchID, std::int64_t afterID, int limit, GetMessagesCallback callback);
     static void postMessage(int matchID, std::string const& content, PostMessageCallback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_putHolder;
+    static async::TaskHolder<web::WebResponse> s_postHolder;
+    static async::TaskHolder<web::WebResponse> s_getHolder;
 };

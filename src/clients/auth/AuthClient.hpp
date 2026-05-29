@@ -26,4 +26,8 @@ class AuthClient {
     static void deleteAPIKey(Callback callback);
     static void getMe(GetMeCallback callback);
     static void getRealtimeToken(GetRealtimeTokenCallback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_postHolder;
+    static async::TaskHolder<web::WebResponse> s_getHolder;
 };

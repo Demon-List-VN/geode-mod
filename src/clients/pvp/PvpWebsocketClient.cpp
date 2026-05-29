@@ -1,15 +1,12 @@
 #include "PvpWebsocketClient.hpp"
 
 #include "../../adapters/PvpMatchAdapter.hpp"
+#include "../../consts/PvpWebsocketEventConst.hpp"
 #include "../../utils/StringUtils.hpp"
 
 #include <Geode/Geode.hpp>
 
 #include <utility>
-
-namespace {
-constexpr float HEARTBEAT_INTERVAL = 25.0f;
-}
 
 namespace gdvn::pvp_websocket_client_detail {
 std::string realtimeUrl(std::string url, std::string const& anonKey) {
@@ -21,15 +18,16 @@ std::string realtimeUrl(std::string url, std::string const& anonKey) {
         url.replace(0, 4, "ws");
     }
 
-    return url + "/realtime/v1/websocket?apikey=" + anonKey + "&vsn=1.0.0";
+    return url + "/realtime/v1/websocket?" + gdvn::consts::PvpWebsocketEvent::API_KEY + "=" + anonKey + "&" +
+           gdvn::consts::PvpWebsocketEvent::VSN + "=1.0.0";
 }
 
 matjson::Value makeChange(std::string const& event, std::string const& table, std::string const& filter) {
     auto change = matjson::Value::object();
-    change["event"] = event;
-    change["schema"] = "public";
-    change["table"] = table;
-    change["filter"] = filter;
+    change[gdvn::consts::PvpWebsocketEvent::EVENT] = event;
+    change[gdvn::consts::PvpWebsocketEvent::SCHEMA] = gdvn::consts::PvpWebsocketEvent::PUBLIC_SCHEMA;
+    change[gdvn::consts::PvpWebsocketEvent::TABLE] = table;
+    change[gdvn::consts::PvpWebsocketEvent::FILTER] = filter;
     return change;
 }
 } // namespace gdvn::pvp_websocket_client_detail
@@ -98,12 +96,12 @@ void PvpWebsocketClient::handleMessage(std::string const& message) {
         return;
     }
 
-    if (mapped.event == "phx_reply") {
+    if (mapped.event == gdvn::consts::PvpWebsocketEvent::PHX_REPLY) {
         this->handleJoinReply(mapped);
         return;
     }
 
-    if (mapped.event != "postgres_changes") {
+    if (mapped.event != gdvn::consts::PvpWebsocketEvent::POSTGRES_CHANGES) {
         return;
     }
 
@@ -137,10 +135,14 @@ void PvpWebsocketClient::handleClosed() {
 void PvpWebsocketClient::sendJoin() {
     auto changes = matjson::Value::array();
     auto matchID = std::to_string(m_matchID);
-    changes.push(makeChange("INSERT", "pvpMatchResults", "matchId=eq." + matchID));
-    changes.push(makeChange("UPDATE", "pvpMatchResults", "matchId=eq." + matchID));
-    changes.push(makeChange("UPDATE", "pvpMatches", "id=eq." + matchID));
-    changes.push(makeChange("INSERT", "pvpMatchMessages", "matchId=eq." + matchID));
+    changes.push(makeChange(gdvn::consts::PvpWebsocketEvent::INSERT, gdvn::consts::PvpWebsocketEvent::RESULT_TABLE,
+                            gdvn::consts::PvpWebsocketEvent::MATCH_ID_FILTER_PREFIX + matchID));
+    changes.push(makeChange(gdvn::consts::PvpWebsocketEvent::UPDATE, gdvn::consts::PvpWebsocketEvent::RESULT_TABLE,
+                            gdvn::consts::PvpWebsocketEvent::MATCH_ID_FILTER_PREFIX + matchID));
+    changes.push(makeChange(gdvn::consts::PvpWebsocketEvent::UPDATE, gdvn::consts::PvpWebsocketEvent::MATCH_TABLE,
+                            gdvn::consts::PvpWebsocketEvent::ROW_ID_FILTER_PREFIX + matchID));
+    changes.push(makeChange(gdvn::consts::PvpWebsocketEvent::INSERT, gdvn::consts::PvpWebsocketEvent::MESSAGE_TABLE,
+                            gdvn::consts::PvpWebsocketEvent::MATCH_ID_FILTER_PREFIX + matchID));
 
     auto broadcast = matjson::Value::object();
     broadcast["ack"] = false;
@@ -150,34 +152,34 @@ void PvpWebsocketClient::sendJoin() {
     presence["enabled"] = false;
 
     auto config = matjson::Value::object();
-    config["broadcast"] = broadcast;
-    config["presence"] = presence;
-    config["postgres_changes"] = changes;
-    config["private"] = false;
+    config[gdvn::consts::PvpWebsocketEvent::BROADCAST] = broadcast;
+    config[gdvn::consts::PvpWebsocketEvent::PRESENCE] = presence;
+    config[gdvn::consts::PvpWebsocketEvent::POSTGRES_CHANGES] = changes;
+    config[gdvn::consts::PvpWebsocketEvent::PRIVATE] = false;
 
     auto payload = matjson::Value::object();
-    payload["config"] = config;
+    payload[gdvn::consts::PvpWebsocketEvent::CONFIG] = config;
     if (!m_accessToken.empty()) {
-        payload["access_token"] = m_accessToken;
+        payload[gdvn::consts::PvpWebsocketEvent::ACCESS_TOKEN] = m_accessToken;
     }
 
     auto ref = this->nextRef();
     auto message = matjson::Value::object();
-    message["topic"] = m_topic;
-    message["event"] = "phx_join";
-    message["payload"] = payload;
-    message["ref"] = ref;
-    message["join_ref"] = ref;
+    message[gdvn::consts::PvpWebsocketEvent::TOPIC] = m_topic;
+    message[gdvn::consts::PvpWebsocketEvent::EVENT] = gdvn::consts::PvpWebsocketEvent::PHX_JOIN;
+    message[gdvn::consts::PvpWebsocketEvent::PAYLOAD] = payload;
+    message[gdvn::consts::PvpWebsocketEvent::REF] = ref;
+    message[gdvn::consts::PvpWebsocketEvent::JOIN_REF] = ref;
 
     this->sendJson(message);
 }
 
 void PvpWebsocketClient::sendHeartbeat() {
     auto message = matjson::Value::object();
-    message["topic"] = "phoenix";
-    message["event"] = "heartbeat";
-    message["payload"] = matjson::Value::object();
-    message["ref"] = this->nextRef();
+    message[gdvn::consts::PvpWebsocketEvent::TOPIC] = gdvn::consts::PvpWebsocketEvent::PHOENIX_TOPIC;
+    message[gdvn::consts::PvpWebsocketEvent::EVENT] = gdvn::consts::PvpWebsocketEvent::HEARTBEAT;
+    message[gdvn::consts::PvpWebsocketEvent::PAYLOAD] = matjson::Value::object();
+    message[gdvn::consts::PvpWebsocketEvent::REF] = this->nextRef();
     this->sendJson(message);
 }
 

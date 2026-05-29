@@ -1,6 +1,6 @@
 #include "AntiCheatService.hpp"
 
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
 
 #include <optional>
 #include <string>

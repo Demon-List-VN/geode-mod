@@ -32,6 +32,11 @@ class PvpChatPopup final : public Popup, public TextInputDelegate {
     void enterPressed(CCTextInputNode*) override;
 
   private:
+    static constexpr float CHAT_HISTORY_WIDTH = 320.0f;
+    static constexpr float CHAT_HISTORY_LINE_HEIGHT = 15.0f;
+    static constexpr int CHAT_HISTORY_VISIBLE_LINES = 8;
+    static constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
+
     PvpOverlayService* m_overlay = nullptr;
     TextInput* m_input = nullptr;
     std::vector<CCLabelBMFont*> m_historyLabels;

@@ -1,11 +1,9 @@
 #include "EventClient.hpp"
 
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
 
-namespace {
-async::TaskHolder<web::WebResponse> s_getHolder;
-async::TaskHolder<web::WebResponse> s_putHolder;
-} // namespace
+async::TaskHolder<web::WebResponse> EventClient::s_getHolder;
+async::TaskHolder<web::WebResponse> EventClient::s_putHolder;
 
 void EventClient::getEventLevel(int levelID, std::string const& type, Callback callback) {
     web::WebRequest req;
@@ -17,7 +15,7 @@ void EventClient::getEventLevel(int levelID, std::string const& type, Callback c
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
+    EventClient::s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });
@@ -30,7 +28,7 @@ void EventClient::putLevel(int levelID, float progress, Callback callback) {
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
+    EventClient::s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });

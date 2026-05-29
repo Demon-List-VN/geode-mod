@@ -15,4 +15,8 @@ class EventClient {
 
     static void getEventLevel(int levelID, std::string const& type, Callback callback);
     static void putLevel(int levelID, float progress, Callback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_getHolder;
+    static async::TaskHolder<web::WebResponse> s_putHolder;
 };

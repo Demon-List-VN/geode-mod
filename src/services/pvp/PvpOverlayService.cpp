@@ -5,7 +5,8 @@
 #include "../../clients/auth/AuthClient.hpp"
 #include "../../clients/level/LevelClient.hpp"
 #include "../../clients/pvp/PvpClient.hpp"
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
+#include "../../consts/PvpWebsocketEventConst.hpp"
 #include "../../ui/components/pvp/PvpChatPopup.hpp"
 #include "../../ui/components/pvp/PvpOverlay.hpp"
 #include "../../ui/components/pvp/PvpRecentChatStack.hpp"
@@ -23,13 +24,6 @@
 using namespace geode::prelude;
 
 namespace gdvn::pvp_overlay_detail {
-constexpr float CHAT_GRACE_SECONDS = 3.0f * 60.0f;
-constexpr float MESSAGE_REFRESH_COALESCE = 0.2f;
-constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
-constexpr int MESSAGE_FETCH_LIMIT = 100;
-
-PvpOverlayService* s_activeOverlay = nullptr;
-
 std::string formatProgress(float value) {
     auto rounded = std::round(value);
     if (std::fabs(value - rounded) < 0.005f) {
@@ -63,6 +57,8 @@ std::string systemParticipantLabel(std::string const& uid, std::string const& cu
 }
 } // namespace gdvn::pvp_overlay_detail
 using namespace gdvn::pvp_overlay_detail;
+
+PvpOverlayService* PvpOverlayService::s_activeOverlay = nullptr;
 
 PvpOverlayService::PvpOverlayService(PlayLayer* layer, int levelID, PvpSubmitterService* submitter)
     : m_layer(layer), m_submitter(submitter), m_levelID(levelID) {
@@ -361,14 +357,14 @@ void PvpOverlayService::handleRealtimeMessage(PvpMatchRealtimeMessageDto const& 
         return;
     }
 
-    if (message.table == "pvpMatchResults") {
+    if (message.table == gdvn::consts::PvpWebsocketEvent::RESULT_TABLE) {
         this->handleResultRow(PvpMatchAdapter::playerProgressFromJson(message.row));
         this->refreshLabel();
         this->scheduleMessageRefresh();
-    } else if (message.table == "pvpMatches") {
+    } else if (message.table == gdvn::consts::PvpWebsocketEvent::MATCH_TABLE) {
         this->handleMatchRow(PvpMatchAdapter::matchRowFromJson(message.row));
         this->scheduleMessageRefresh();
-    } else if (message.table == "pvpMatchMessages") {
+    } else if (message.table == gdvn::consts::PvpWebsocketEvent::MESSAGE_TABLE) {
         log::info("Versus realtime chat event received: match={}, id={}", message.rowMatchID, message.rowID);
         this->handleMessageRow(PvpMessageAdapter::fromJson(message.row), true);
         this->scheduleMessageRefresh();

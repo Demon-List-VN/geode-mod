@@ -1,9 +1,5 @@
 #include "PvpOverlay.hpp"
 
-namespace {
-constexpr float LABEL_MARGIN = 8.0f;
-}
-
 PvpOverlay::PvpOverlay(PlayLayer* layer) : m_layer(layer) {
     if (!m_layer) {
         return;

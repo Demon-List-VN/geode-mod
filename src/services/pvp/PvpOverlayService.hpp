@@ -45,6 +45,12 @@ class PvpOverlayService final {
     std::vector<std::string> getChatHistoryLines() const;
 
   private:
+    static constexpr float CHAT_GRACE_SECONDS = 3.0f * 60.0f;
+    static constexpr float MESSAGE_REFRESH_COALESCE = 0.2f;
+    static constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
+    static constexpr int MESSAGE_FETCH_LIMIT = 100;
+    static PvpOverlayService* s_activeOverlay;
+
     PlayLayer* m_layer = nullptr;
     std::unique_ptr<PvpOverlay> m_overlay;
     std::unique_ptr<PvpRecentChatStack> m_recentChatStack;

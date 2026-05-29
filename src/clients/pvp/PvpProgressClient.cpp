@@ -1,10 +1,8 @@
 #include "PvpProgressClient.hpp"
 
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
 
-namespace {
-async::TaskHolder<web::WebResponse> s_postHolder;
-}
+async::TaskHolder<web::WebResponse> PvpProgressClient::s_postHolder;
 
 void PvpProgressClient::postHeatmap(size_t count, Callback callback) {
     web::WebRequest req;
@@ -12,7 +10,7 @@ void PvpProgressClient::postHeatmap(size_t count, Callback callback) {
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
+    PvpProgressClient::s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });
@@ -28,7 +26,7 @@ void PvpProgressClient::postDeathCount(int levelID, std::string const& count, bo
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
+    PvpProgressClient::s_postHolder.spawn(req.post(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });

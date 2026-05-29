@@ -7,13 +7,6 @@
 #include <algorithm>
 #include <utility>
 
-namespace {
-constexpr float CHAT_HISTORY_WIDTH = 320.0f;
-constexpr float CHAT_HISTORY_LINE_HEIGHT = 15.0f;
-constexpr int CHAT_HISTORY_VISIBLE_LINES = 8;
-constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
-} // namespace
-
 PvpChatPopup* PvpChatPopup::create(PvpOverlayService* overlay) {
     auto ret = new PvpChatPopup();
     if (ret->init(overlay)) {

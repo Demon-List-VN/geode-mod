@@ -4,17 +4,15 @@
 #include "../../adapters/OtpGrantResponseAdapter.hpp"
 #include "../../adapters/OtpResponseAdapter.hpp"
 #include "../../adapters/RealtimeTokenResponseAdapter.hpp"
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
 
-namespace {
-async::TaskHolder<web::WebResponse> s_postHolder;
-async::TaskHolder<web::WebResponse> s_getHolder;
-} // namespace
+async::TaskHolder<web::WebResponse> AuthClient::s_postHolder;
+async::TaskHolder<web::WebResponse> AuthClient::s_getHolder;
 
 void AuthClient::postOTP(PostOTPCallback callback) {
     web::WebRequest req;
 
-    s_postHolder.spawn(req.post(gdvn::config::API_URL + "/auth/otp"), [callback](web::WebResponse res) {
+    AuthClient::s_postHolder.spawn(req.post(gdvn::config::API_URL + "/auth/otp"), [callback](web::WebResponse res) {
         OtpResponseDto dto;
 
         if (res.ok()) {
@@ -32,7 +30,7 @@ void AuthClient::getOTP(std::string const& code, GetOTPCallback callback) {
     web::WebRequest req;
     std::string url = gdvn::config::API_URL + "/auth/otp/" + code;
 
-    s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
+    AuthClient::s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
         OtpGrantResponseDto dto;
 
         if (res.ok()) {
@@ -52,7 +50,7 @@ void AuthClient::deleteAPIKey(Callback callback) {
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_postHolder.spawn(req.send("DELETE", url), [callback](web::WebResponse res) {
+    AuthClient::s_postHolder.spawn(req.send("DELETE", url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });
@@ -65,7 +63,7 @@ void AuthClient::getMe(GetMeCallback callback) {
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
     req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
-    s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
+    AuthClient::s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
         AuthMeResponseDto dto;
 
         if (res.ok()) {
@@ -85,7 +83,7 @@ void AuthClient::getRealtimeToken(GetRealtimeTokenCallback callback) {
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
+    AuthClient::s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
         RealtimeTokenResponseDto dto;
 
         if (res.ok()) {

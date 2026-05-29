@@ -16,4 +16,7 @@ class UpdaterClient {
 
     static void getLatestDownload(Callback callback);
     static void getLatestRelease(GetLatestReleaseCallback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_getHolder;
 };

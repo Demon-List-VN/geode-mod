@@ -3,13 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 
-namespace {
-constexpr float CHAT_MARGIN = 8.0f;
-constexpr float CHAT_MESSAGE_LIFETIME = 8.0f;
-constexpr float CHAT_FADE_TIME = 1.5f;
-constexpr int MAX_RECENT_MESSAGES = 4;
-}
-
 PvpRecentChatStack::PvpRecentChatStack(PlayLayer* layer) {
     if (!layer) {
         return;

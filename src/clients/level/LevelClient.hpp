@@ -17,4 +17,7 @@ class LevelClient {
 
     static void getLevel(int id, GetLevelCallback callback);
     static void getActivePvpMatch(int levelID, GetActivePvpMatchCallback callback);
+
+  private:
+    static async::TaskHolder<web::WebResponse> s_getHolder;
 };

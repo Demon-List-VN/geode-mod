@@ -1,6 +1,6 @@
 #include "../auth/AuthService.hpp"
 #include "../../clients/auth/AuthClient.hpp"
-#include "../../config.hpp"
+#include "../../consts/ConfigConst.hpp"
 #include <Geode/ui/Notification.hpp>
 
 static void showOTPDialog(std::string const& code) {

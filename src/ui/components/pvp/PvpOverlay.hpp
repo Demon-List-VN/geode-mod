@@ -18,6 +18,8 @@ class PvpOverlay {
     void cleanup();
 
   private:
+    static constexpr float LABEL_MARGIN = 8.0f;
+
     PlayLayer* m_layer = nullptr;
     CCLabelBMFont* m_label = nullptr;
 };
