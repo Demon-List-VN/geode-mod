@@ -54,7 +54,8 @@ void AuthClient::deleteAPIKey(Callback callback) {
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_postHolder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 

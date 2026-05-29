@@ -97,7 +97,7 @@ void AuthService::checkOTP(std::string code) {
 }
 
 void AuthService::logout() {
-    AuthClient::deleteAPIKey([&](web::WebResponse& res) {
+    AuthClient::deleteAPIKey([&](EmptyResponseDto const&, web::WebResponse& res) {
         Mod::get()->setSavedValue("api-key", std::string(""));
         Mod::get()->setSavedValue("player-name", std::string(""));
         FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();

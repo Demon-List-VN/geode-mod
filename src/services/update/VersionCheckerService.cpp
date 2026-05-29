@@ -21,7 +21,7 @@ void VersionCheckerService::downloadUpdate() {
 	);
 	loadingToast->show();
 
-	UpdateClient::getLatestDownload([&](web::WebResponse& res) {
+	UpdateClient::getLatestDownload([&](EmptyResponseDto const&, web::WebResponse& res) {
 		geode::Loader::get()->queueInMainThread([&] {
 			loadingToast->hide();
 		});

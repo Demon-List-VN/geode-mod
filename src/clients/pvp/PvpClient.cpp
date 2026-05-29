@@ -1,5 +1,7 @@
 #include "PvpClient.hpp"
 
+#include "../../adapters/PvpMessageAdapter.hpp"
+#include "../../adapters/PvpMessagesResponseAdapter.hpp"
 #include "../../common.hpp"
 #include "../../utils/AuthConfig.hpp"
 #include <vector>
@@ -17,7 +19,8 @@ void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback c
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_putHolder.spawn(req.put(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 
@@ -32,7 +35,8 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_putHolder.spawn(req.put(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 
@@ -43,11 +47,12 @@ void PvpClient::postDeathCount(int matchID, std::string const& count, Callback c
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 
-void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, Callback callback) {
+void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, GetMessagesCallback callback) {
 	web::WebRequest req;
 	auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
 	std::vector<std::string> params;
@@ -73,11 +78,20 @@ void PvpClient::getMessages(int matchID, std::int64_t afterID, int limit, Callba
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
-		callback(res);
+		PvpMessagesResponseDto dto;
+
+		if (res.ok()) {
+			auto jsonResult = res.json();
+			if (jsonResult) {
+				dto = gdvn::adapters::PvpMessagesResponseAdapter::fromJson(jsonResult.unwrap());
+			}
+		}
+
+		callback(dto, res);
 	});
 }
 
-void PvpClient::postMessage(int matchID, std::string const& content, Callback callback) {
+void PvpClient::postMessage(int matchID, std::string const& content, PostMessageCallback callback) {
 	web::WebRequest req;
 	auto body = matjson::Value::object();
 	body["content"] = content;
@@ -87,6 +101,15 @@ void PvpClient::postMessage(int matchID, std::string const& content, Callback ca
 	auto url = API_URL + "/pvp/matches/" + std::to_string(matchID) + "/messages";
 
 	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
-		callback(res);
+		PvpMessageDto dto;
+
+		if (res.ok()) {
+			auto jsonResult = res.json();
+			if (jsonResult) {
+				dto = gdvn::adapters::PvpMessageAdapter::fromJson(jsonResult.unwrap());
+			}
+		}
+
+		callback(dto, res);
 	});
 }

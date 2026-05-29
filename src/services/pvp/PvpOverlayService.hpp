@@ -4,6 +4,8 @@
 #include <Geode/binding/CCMenuItemSpriteExtra.hpp>
 #include <Geode/binding/PlayLayer.hpp>
 #include "PvpRealtimeSocketService.hpp"
+#include "../../dtos/pvp/PvpMessageDto.hpp"
+#include "../../dtos/pvp/PvpMessagesResponseDto.hpp"
 
 #include <cstdint>
 #include <string>
@@ -112,8 +114,8 @@ private:
 	void handleRealtimeMessage(matjson::Value const& json);
 	void handleResultRow(matjson::Value const& row);
 	void handleMatchRow(matjson::Value const& row);
-	void handleMessagesPayload(matjson::Value const& json, bool animateNew);
-	void handleMessageRow(matjson::Value const& row, bool animateNew);
+	void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
+	void handleMessageRow(PvpMessageDto const& message, bool animateNew);
 	void handleSystemMetadata(matjson::Value const& metadata);
 	void parseMatchSnapshot(matjson::Value const& json);
 	std::string formatSystemMessage(matjson::Value const& metadata) const;

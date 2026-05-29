@@ -17,5 +17,5 @@ void DeathCounterService::add(int percent) {
 void DeathCounterService::submit() {
 	using namespace geode::prelude;
 
-	PvpProgressClient::postDeathCount(deathData.levelID, deathData.serialize(), completed, [&](web::WebResponse& res) {});
+	PvpProgressClient::postDeathCount(deathData.levelID, deathData.serialize(), completed, [&](EmptyResponseDto const&, web::WebResponse& res) {});
 }

@@ -10,7 +10,7 @@ RaidSubmitterService::~RaidSubmitterService() = default;
 
 RaidSubmitterService::RaidSubmitterService(int levelID) : m_state(std::make_shared<State>(levelID)) {
 	std::weak_ptr<State> state = m_state;
-	EventClient::getEventLevel(levelID, "raid", [&](web::WebResponse& res) {
+	EventClient::getEventLevel(levelID, "raid", [&](EmptyResponseDto const&, web::WebResponse& res) {
 		if (auto locked = state.lock()) {
 			locked->inEvent.store(res.ok());
 		}
@@ -22,7 +22,7 @@ void RaidSubmitterService::submit() {
 		return;
 	}
 
-	EventClient::putLevel(m_state->levelID, m_state->best, [&](web::WebResponse& res) {});
+	EventClient::putLevel(m_state->levelID, m_state->best, [&](EmptyResponseDto const&, web::WebResponse& res) {});
 }
 
 void RaidSubmitterService::record(float progress) {

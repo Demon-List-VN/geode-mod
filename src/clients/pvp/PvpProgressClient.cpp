@@ -14,7 +14,8 @@ void PvpProgressClient::postHeatmap(size_t count, Callback callback) {
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 
@@ -29,6 +30,7 @@ void PvpProgressClient::postDeathCount(int levelID, std::string const& count, bo
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_postHolder.spawn(req.post(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }

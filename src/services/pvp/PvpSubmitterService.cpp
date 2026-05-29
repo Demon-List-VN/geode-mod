@@ -49,7 +49,7 @@ void PvpSubmitterService::submitPlayMode(std::shared_ptr<State> state, std::stri
 
 	state->submittedPlayMode = normalized;
 
-	PvpClient::putPlayMode(state->matchID, normalized, [&](web::WebResponse& res) {
+	PvpClient::putPlayMode(state->matchID, normalized, [&](EmptyResponseDto const&, web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to submit Versus play mode '{}': HTTP {}", normalized, res.code());
 		}
@@ -61,7 +61,7 @@ void PvpSubmitterService::submit(bool completed) {
 		return;
 	}
 
-	PvpClient::putProgress(m_state->matchID, m_state->best, completed, [&](web::WebResponse& res) {});
+	PvpClient::putProgress(m_state->matchID, m_state->best, completed, [&](EmptyResponseDto const&, web::WebResponse& res) {});
 }
 
 void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
@@ -80,7 +80,7 @@ void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
 	}
 
 	std::weak_ptr<State> weakState = state;
-	PvpClient::postDeathCount(state->matchID, serializeDeathCount(count), [&](web::WebResponse& res) {
+	PvpClient::postDeathCount(state->matchID, serializeDeathCount(count), [&](EmptyResponseDto const&, web::WebResponse& res) {
 		if (auto locked = weakState.lock()) {
 			if (res.ok()) {
 				for (size_t i = 0; i < locked->pendingDeathCount.size(); i++) {

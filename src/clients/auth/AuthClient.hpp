@@ -5,6 +5,7 @@
 #include <functional>
 #include <string>
 
+#include "../../dtos/common/EmptyResponseDto.hpp"
 #include "../../dtos/auth/AuthMeResponseDto.hpp"
 #include "../../dtos/auth/OtpGrantResponseDto.hpp"
 #include "../../dtos/auth/OtpResponseDto.hpp"
@@ -14,7 +15,7 @@ using namespace geode::prelude;
 
 class AuthClient {
 public:
-	using Callback = std::function<void(web::WebResponse&)>;
+	using Callback = std::function<void(EmptyResponseDto const&, web::WebResponse&)>;
 	using PostOTPCallback = std::function<void(OtpResponseDto const&, web::WebResponse&)>;
 	using GetOTPCallback = std::function<void(OtpGrantResponseDto const&, web::WebResponse&)>;
 	using GetMeCallback = std::function<void(AuthMeResponseDto const&, web::WebResponse&)>;

@@ -19,7 +19,8 @@ void EventClient::getEventLevel(int levelID, std::string const& type, Callback c
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }
 
@@ -30,6 +31,7 @@ void EventClient::putLevel(int levelID, float progress, Callback callback) {
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
 	s_putHolder.spawn(req.put(url), [&](web::WebResponse res) {
-		callback(res);
+		EmptyResponseDto dto;
+		callback(dto, res);
 	});
 }

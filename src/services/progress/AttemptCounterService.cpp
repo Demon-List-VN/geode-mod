@@ -11,5 +11,5 @@ void AttemptCounterService::add() {
 void AttemptCounterService::submit() {
 	using namespace geode::prelude;
 
-	PvpProgressClient::postHeatmap(cnt, [&](web::WebResponse& res) {});
+	PvpProgressClient::postHeatmap(cnt, [&](EmptyResponseDto const&, web::WebResponse& res) {});
 }

@@ -2,6 +2,7 @@
 
 #include "../auth/AuthService.hpp"
 #include "PvpSubmitterService.hpp"
+#include "../../adapters/PvpMessageAdapter.hpp"
 #include "../../clients/auth/AuthClient.hpp"
 #include "../../clients/level/LevelClient.hpp"
 #include "../../clients/pvp/PvpClient.hpp"
@@ -700,7 +701,7 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 	auto afterID = incremental ? m_latestMessageID : 0;
 	auto limit = incremental ? MESSAGE_FETCH_LIMIT : 0;
 
-	PvpClient::getMessages(m_matchID, afterID, limit, [&](web::WebResponse& res) {
+	PvpClient::getMessages(m_matchID, afterID, limit, [&](PvpMessagesResponseDto const& messages, web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -710,13 +711,12 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 			return;
 		}
 
-		auto json = res.json();
-		if (!json) {
-			log::warn("Failed to parse Versus chat messages");
+		if (!messages.valid) {
+			log::warn("Failed to map Versus chat messages");
 			return;
 		}
 
-		this->handleMessagesPayload(json.unwrap(), animateNew);
+		this->handleMessagesPayload(messages, animateNew);
 	});
 }
 
@@ -744,7 +744,7 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 
 	m_chatSending = true;
 
-	PvpClient::postMessage(m_matchID, content, [&](web::WebResponse& res) {
+	PvpClient::postMessage(m_matchID, content, [&](PvpMessageDto const& message, web::WebResponse& res) {
 		m_chatSending = false;
 
 		if (m_cleanedUp) {
@@ -761,11 +761,10 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 			return;
 		}
 
-		auto json = res.json();
-		if (!json) {
-			log::warn("Failed to parse sent Versus chat message");
+		if (!message.valid) {
+			log::warn("Failed to map sent Versus chat message");
 		} else {
-			this->handleMessageRow(json.unwrap(), true);
+			this->handleMessageRow(message, true);
 		}
 
 		if (m_chatPopup) {
@@ -875,7 +874,7 @@ void PvpOverlayService::handleRealtimeMessage(matjson::Value const& json) {
 					getInteger(row, "matchId"),
 					getInteger(row, "id")
 				);
-				this->handleMessageRow(row, true);
+				this->handleMessageRow(gdvn::adapters::PvpMessageAdapter::fromJson(row), true);
 				this->scheduleMessageRefresh();
 			}
 		}
@@ -936,39 +935,27 @@ void PvpOverlayService::scheduleMessageRefresh() {
 	m_messageRefreshTimer = MESSAGE_REFRESH_COALESCE;
 }
 
-void PvpOverlayService::handleMessagesPayload(matjson::Value const& json, bool animateNew) {
-	if (json.isArray()) {
-		for (auto const& message : json.asArray().unwrap()) {
-			this->handleMessageRow(message, animateNew);
-		}
-		return;
-	}
-
-	if (json["messages"].isArray()) {
-		for (auto const& message : json["messages"].asArray().unwrap()) {
-			this->handleMessageRow(message, animateNew);
-		}
-		return;
-	}
-
-	if (json["data"].isArray()) {
-		for (auto const& message : json["data"].asArray().unwrap()) {
-			this->handleMessageRow(message, animateNew);
-		}
+void PvpOverlayService::handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew) {
+	for (auto const& message : messages.messages) {
+		this->handleMessageRow(message, animateNew);
 	}
 }
 
-void PvpOverlayService::handleMessageRow(matjson::Value const& row, bool animateNew) {
+void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateNew) {
+	if (!dto.valid) {
+		return;
+	}
+
 	ChatMessage message;
-	message.id = getInteger(row, "id");
-	message.senderUid = getString(row, "senderUid");
-	message.type = getString(row, "type");
-	message.senderAnonymous = getBool(row, "senderAnonymous") || getBool(row, "sender_anonymous");
+	message.id = dto.id;
+	message.senderUid = dto.senderUid;
+	message.type = dto.type;
+	message.senderAnonymous = dto.senderAnonymous;
 	auto isProgressSystemMessage = false;
 	auto isHiddenSystemMessage = false;
 
 	if (message.type == "system") {
-		auto const& metadata = row["metadata"];
+		auto const& metadata = dto.metadata;
 		auto kind = getString(metadata, "kind");
 		isProgressSystemMessage = kind == "progress";
 		isHiddenSystemMessage = kind == "play_mode";
@@ -982,9 +969,9 @@ void PvpOverlayService::handleMessageRow(matjson::Value const& row, bool animate
 			return;
 		}
 
-		message.content = this->formatSystemMessage(row["metadata"]);
+		message.content = this->formatSystemMessage(dto.metadata);
 	} else {
-		message.content = getString(row, "content");
+		message.content = dto.content;
 	}
 
 	if (message.content.empty()) {
