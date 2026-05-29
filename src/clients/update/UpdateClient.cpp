@@ -11,7 +11,7 @@ void UpdateClient::getLatestDownload(Callback callback) {
 	req.userAgent("geode");
 	auto url = "https://github.com/Demon-List-VN/geode-mod/releases/latest/download/nampe.gdvn.geode";
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		EmptyResponseDto dto;
 		callback(dto, res);
 	});
@@ -22,7 +22,7 @@ void UpdateClient::getLatestRelease(GetLatestReleaseCallback callback) {
 	req.userAgent("geode");
 	auto url = "https://api.github.com/repos/Demon-List-VN/geode-mod/releases/latest";
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		GithubReleaseResponseDto dto;
 
 		if (res.ok()) {

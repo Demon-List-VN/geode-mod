@@ -11,7 +11,7 @@ static void showOTPDialog(std::string const& code) {
 		"Open GDVN website to grant access, then click <cg>Continue</c>.\nIf the website does not open, open GDVN website manually and go to <cy>Settings > Auth > Grant OTP</c>.\nYour OTP code is: <cr>" + code + "</c>",
 		"Open Website",
 		"Continue",
-		[&](auto, bool btn2) {
+		[code, grantUrl](auto, bool btn2) {
 			if (btn2) {
 				AuthService::checkOTP(code);
 			} else {
@@ -32,24 +32,23 @@ std::string AuthService::getPlayerName() {
 }
 
 void AuthService::login() {
-    geode::Loader::get()->queueInMainThread([&] {
-        geode::createQuickPopup(
-            "GDVN Login",
-            "Do you want to <cy>login</c> to Geometry Dash VN?",
-            "Later",
-            "Login",
-            [&](auto, bool btn2) {
-                if (btn2) {
-                    requestOTP();
-                }
-            }
-        );
-    });
-
+	geode::Loader::get()->queueInMainThread([] {
+		geode::createQuickPopup(
+			"GDVN Login",
+			"Do you want to <cy>login</c> to Geometry Dash VN?",
+			"Later",
+			"Login",
+			[](auto, bool btn2) {
+				if (btn2) {
+					requestOTP();
+				}
+			}
+		);
+	});
 }
 
 void AuthService::requestOTP() {
-	AuthClient::postOTP([&](OtpResponseDto const& otp, web::WebResponse& res) {
+	AuthClient::postOTP([=](OtpResponseDto const& otp, web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to create OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to create login code. Please try again.", "OK")->show();
@@ -64,14 +63,14 @@ void AuthService::requestOTP() {
 
 		auto code = otp.code;
 
-		geode::Loader::get()->queueInMainThread([&] {
+		geode::Loader::get()->queueInMainThread([code] {
 			showOTPDialog(code);
 		});
 	});
 }
 
 void AuthService::checkOTP(std::string code) {
-	AuthClient::getOTP(code, [&](OtpGrantResponseDto const& grant, web::WebResponse& res) {
+	AuthClient::getOTP(code, [=](OtpGrantResponseDto const& grant, web::WebResponse& res) {
 		if (!res.ok()) {
 			log::warn("Failed to verify OTP code: HTTP {}", res.code());
 			FLAlertLayer::create("Error", "Failed to verify login code. Please try again.", "OK")->show();
@@ -97,7 +96,7 @@ void AuthService::checkOTP(std::string code) {
 }
 
 void AuthService::logout() {
-    AuthClient::deleteAPIKey([&](EmptyResponseDto const&, web::WebResponse& res) {
+    AuthClient::deleteAPIKey([=](EmptyResponseDto const&, web::WebResponse& res) {
         Mod::get()->setSavedValue("api-key", std::string(""));
         Mod::get()->setSavedValue("player-name", std::string(""));
         FLAlertLayer::create("GDVN", "You have been logged out.", "OK")->show();
@@ -127,48 +126,50 @@ void AuthService::check() {
         return;
     }
 
-    AuthClient::getMe([&](AuthMeResponseDto const& authMe, web::WebResponse& res) {
-        loadingToast->hide();
+    AuthClient::getMe([loadingToast](AuthMeResponseDto const& authMe, web::WebResponse& res) {
+        auto ok = res.ok();
+        auto code = res.code();
+        auto valid = authMe.valid;
+        auto name = authMe.name;
 
-        if (!res.ok()) {
-            if (res.code() == 426) {
-                auto errorToast = geode::Notification::create(
-                    "Please update GDVN mod",
+        geode::Loader::get()->queueInMainThread([loadingToast, ok, code, valid, name] {
+            loadingToast->hide();
+
+            if (!ok) {
+                if (code == 426) {
+                    geode::Notification::create(
+                        "Please update GDVN mod",
+                        geode::NotificationIcon::Error,
+                        2.0f
+                    )->show();
+
+                    return;
+                }
+
+                Mod::get()->setSavedValue("api-key", std::string(""));
+                Mod::get()->setSavedValue("player-name", std::string(""));
+
+                geode::Notification::create(
+                    "Token expired. Please log back in",
                     geode::NotificationIcon::Error,
                     2.0f
-                );
-
-                errorToast->show();
+                )->show();
 
                 return;
             }
 
-            auto errorToast = geode::Notification::create(
-                "Token expired. Please log back in",
-                geode::NotificationIcon::Error,
+            if (!valid) {
+                log::warn("Failed to check login status: invalid response");
+                return;
+            }
+
+            Mod::get()->setSavedValue("player-name", name);
+
+            geode::Notification::create(
+                "Logged in as " + name,
+                geode::NotificationIcon::Success,
                 2.0f
-            );
-
-            Mod::get()->setSavedValue("api-key", std::string(""));
-            Mod::get()->setSavedValue("player-name", std::string(""));
-            errorToast->show();
-
-            return;
-        }
-
-        if (!authMe.valid) {
-            log::warn("Failed to check login status: invalid response");
-            return;
-        }
-
-        Mod::get()->setSavedValue("player-name", authMe.name);
-
-        auto successToast = geode::Notification::create(
-        "Logged in as " + AuthService::getPlayerName(),
-            geode::NotificationIcon::Success,
-            2.0f
-        );
-
-        successToast->show();
+            )->show();
+        });
     });
 }

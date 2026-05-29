@@ -15,7 +15,7 @@ async::TaskHolder<web::WebResponse> s_getHolder;
 void AuthClient::postOTP(PostOTPCallback callback) {
 	web::WebRequest req;
 
-	s_postHolder.spawn(req.post(API_URL + "/auth/otp"), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.post(API_URL + "/auth/otp"), [callback](web::WebResponse res) {
 		OtpResponseDto dto;
 
 		if (res.ok()) {
@@ -33,7 +33,7 @@ void AuthClient::getOTP(std::string const& code, GetOTPCallback callback) {
 	web::WebRequest req;
 	std::string url = API_URL + "/auth/otp/" + code;
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		OtpGrantResponseDto dto;
 
 		if (res.ok()) {
@@ -53,7 +53,7 @@ void AuthClient::deleteAPIKey(Callback callback) {
 
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_postHolder.spawn(req.send("DELETE", url), [&](web::WebResponse res) {
+	s_postHolder.spawn(req.send("DELETE", url), [callback](web::WebResponse res) {
 		EmptyResponseDto dto;
 		callback(dto, res);
 	});
@@ -66,7 +66,7 @@ void AuthClient::getMe(GetMeCallback callback) {
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 	req.header("X-GDVN-Mod-Version", Mod::get()->getVersion().toNonVString());
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		AuthMeResponseDto dto;
 
 		if (res.ok()) {
@@ -86,7 +86,7 @@ void AuthClient::getRealtimeToken(GetRealtimeTokenCallback callback) {
 
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		RealtimeTokenResponseDto dto;
 
 		if (res.ok()) {

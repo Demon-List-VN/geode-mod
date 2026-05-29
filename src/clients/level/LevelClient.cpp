@@ -19,7 +19,7 @@ void LevelClient::getLevel(int id, GetLevelCallback callback) {
 
 	auto url = API_URL + "/lists/levels/" + std::to_string(id) + "/starred";
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		LevelInfoResponseDto dto;
 
 		if (res.ok()) {
@@ -39,7 +39,7 @@ void LevelClient::getActivePvpMatch(int levelID, GetActivePvpMatchCallback callb
 
 	req.header("Authorization", "Bearer " + gdvn::auth_config::getToken());
 
-	s_getHolder.spawn(req.get(url), [&](web::WebResponse res) {
+	s_getHolder.spawn(req.get(url), [callback](web::WebResponse res) {
 		ActivePvpMatchResponseDto dto;
 
 		if (res.ok()) {

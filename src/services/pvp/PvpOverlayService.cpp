@@ -59,10 +59,10 @@ std::string realtimeUrl(std::string url, std::string const& anonKey) {
 }
 
 std::string trimCopy(std::string value) {
-	auto begin = std::find_if_not(value.begin(), value.end(), [&](unsigned char c) {
+	auto begin = std::find_if_not(value.begin(), value.end(), [=](unsigned char c) {
 		return std::isspace(c);
 	});
-	auto end = std::find_if_not(value.rbegin(), value.rend(), [&](unsigned char c) {
+	auto end = std::find_if_not(value.rbegin(), value.rend(), [=](unsigned char c) {
 		return std::isspace(c);
 	}).base();
 
@@ -384,14 +384,14 @@ protected:
 
 		auto upSprite = ButtonSprite::create("Up", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		upSprite->setScale(0.4f);
-		m_upButton = CCMenuItemExt::createSpriteExtra(upSprite, [&](auto*) {
+		m_upButton = CCMenuItemExt::createSpriteExtra(upSprite, [this](auto*) {
 			this->scrollHistory(1);
 		});
 		m_buttonMenu->addChildAtPosition(m_upButton, Anchor::TopRight, { -28.0f, -48.0f });
 
 		auto downSprite = ButtonSprite::create("Down", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		downSprite->setScale(0.4f);
-		m_downButton = CCMenuItemExt::createSpriteExtra(downSprite, [&](auto*) {
+		m_downButton = CCMenuItemExt::createSpriteExtra(downSprite, [this](auto*) {
 			this->scrollHistory(-1);
 		});
 		m_buttonMenu->addChildAtPosition(m_downButton, Anchor::TopRight, { -28.0f, -86.0f });
@@ -405,7 +405,7 @@ protected:
 
 		auto sendSprite = ButtonSprite::create("Send", "goldFont.fnt", "GJ_button_01.png", 0.8f);
 		sendSprite->setScale(0.55f);
-		m_sendButton = CCMenuItemExt::createSpriteExtra(sendSprite, [&](auto*) {
+		m_sendButton = CCMenuItemExt::createSpriteExtra(sendSprite, [this](auto*) {
 			this->submit();
 		});
 		m_buttonMenu->addChildAtPosition(m_sendButton, Anchor::Bottom, { 128.0f, 38.0f });
@@ -591,7 +591,7 @@ void PvpOverlayService::requestMatch() {
 		return;
 	}
 
-	LevelClient::getActivePvpMatch(m_levelID, [&](ActivePvpMatchResponseDto const& match, web::WebResponse& res) {
+	LevelClient::getActivePvpMatch(m_levelID, [this](ActivePvpMatchResponseDto const& match, web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -668,7 +668,7 @@ void PvpOverlayService::requestRealtimeToken() {
 
 	m_requestingRealtimeToken = true;
 
-	AuthClient::getRealtimeToken([&](RealtimeTokenResponseDto const& token, web::WebResponse& res) {
+	AuthClient::getRealtimeToken([this](RealtimeTokenResponseDto const& token, web::WebResponse& res) {
 		m_requestingRealtimeToken = false;
 
 		if (m_cleanedUp) {
@@ -701,7 +701,7 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 	auto afterID = incremental ? m_latestMessageID : 0;
 	auto limit = incremental ? MESSAGE_FETCH_LIMIT : 0;
 
-	PvpClient::getMessages(m_matchID, afterID, limit, [&](PvpMessagesResponseDto const& messages, web::WebResponse& res) {
+	PvpClient::getMessages(m_matchID, afterID, limit, [this, animateNew](PvpMessagesResponseDto const& messages, web::WebResponse& res) {
 		if (m_cleanedUp) {
 			return;
 		}
@@ -744,7 +744,7 @@ void PvpOverlayService::submitChatMessage(std::string content) {
 
 	m_chatSending = true;
 
-	PvpClient::postMessage(m_matchID, content, [&](PvpMessageDto const& message, web::WebResponse& res) {
+	PvpClient::postMessage(m_matchID, content, [this](PvpMessageDto const& message, web::WebResponse& res) {
 		m_chatSending = false;
 
 		if (m_cleanedUp) {
@@ -979,7 +979,7 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
 	}
 
 	if (message.id > 0) {
-		auto existing = std::find_if(m_chatMessages.begin(), m_chatMessages.end(), [&](ChatMessage const& item) {
+		auto existing = std::find_if(m_chatMessages.begin(), m_chatMessages.end(), [message](ChatMessage const& item) {
 			return item.id == message.id;
 		});
 

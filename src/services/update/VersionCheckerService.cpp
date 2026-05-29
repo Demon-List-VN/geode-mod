@@ -8,7 +8,7 @@
 #include <Geode/ui/Popup.hpp>
 
 static void showUpdateToast(std::string const& message, geode::NotificationIcon icon, float time = 2.0f) {
-	geode::Loader::get()->queueInMainThread([&] {
+	geode::Loader::get()->queueInMainThread([message, icon, time] {
 		geode::Notification::create(message, icon, time)->show();
 	});
 }
@@ -21,8 +21,8 @@ void VersionCheckerService::downloadUpdate() {
 	);
 	loadingToast->show();
 
-	UpdateClient::getLatestDownload([&](EmptyResponseDto const&, web::WebResponse& res) {
-		geode::Loader::get()->queueInMainThread([&] {
+	UpdateClient::getLatestDownload([=](EmptyResponseDto const&, web::WebResponse& res) {
+		geode::Loader::get()->queueInMainThread([loadingToast] {
 			loadingToast->hide();
 		});
 
@@ -90,7 +90,7 @@ void VersionCheckerService::downloadUpdate() {
 			return;
 		}
 
-		geode::Loader::get()->queueInMainThread([&] {
+		geode::Loader::get()->queueInMainThread([] {
 			FLAlertLayer::create(
 				"Update Installed",
 				"GDVN has been updated.\nPlease restart Geometry Dash to apply the update.",
@@ -101,7 +101,7 @@ void VersionCheckerService::downloadUpdate() {
 }
 
 void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
-	UpdateClient::getLatestRelease([&](GithubReleaseResponseDto const& release, web::WebResponse& res) {
+	UpdateClient::getLatestRelease([=](GithubReleaseResponseDto const& release, web::WebResponse& res) {
 		if (!res.ok()) {
 			if (notifyIfCurrent) {
 				showUpdateToast("Failed to check for GDVN updates", geode::NotificationIcon::Error);
@@ -123,13 +123,13 @@ void VersionCheckerService::checkForUpdate(bool notifyIfCurrent) {
 			return;
 		}
 
-		geode::Loader::get()->queueInMainThread([&] {
+		geode::Loader::get()->queueInMainThread([localVersion, latestVersion] {
 			geode::createQuickPopup(
 				"Update Available",
 				"A new version of <cy>Geometry Dash VN</c> is available!\n\nCurrent: <cr>" + localVersion + "</c>\nLatest: <cg>" + latestVersion + "</c>",
 				"Close",
 				"Update",
-				[&](auto, bool btn2) {
+				[](auto, bool btn2) {
 					if (btn2) {
 						VersionCheckerService::downloadUpdate();
 					}

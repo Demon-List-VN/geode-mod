@@ -31,17 +31,16 @@ class $modify(LevelInfoLayer) {
 			auto layer = this;
 			layer->retain();
 
-		    LevelService::getLevel(id, [&](
-				LevelInfoResponseDto const& model,
-				web::WebResponse& res
-			) mutable {
-				auto cleanup = [&]() {
-					if (loadingLabel) {
-						loadingLabel->removeFromParent();
-						loadingLabel = nullptr;
-					}
+			    LevelService::getLevel(id, [id, isLoggedIn, layer, level, loadingLabel](
+					LevelInfoResponseDto const& model,
+					web::WebResponse& res
+				) {
+					auto cleanup = [layer, loadingLabel]() {
+						if (loadingLabel) {
+							loadingLabel->removeFromParent();
+						}
 
-					layer->release();
+						layer->release();
 				};
 
 				if (!res.ok()) {
@@ -82,7 +81,7 @@ class $modify(LevelInfoLayer) {
 				"You are not logged in, progress will not be saved to GDVN server.",
 				"Cancel",
 				"Play",
-				[&](auto, bool btn2) {
+				[this, sender](auto, bool btn2) {
 					if (btn2) {
 						m_fields->m_confirmedLoggedOutPlay = true;
 						LevelInfoLayer::onPlay(sender);
