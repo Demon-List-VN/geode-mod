@@ -82,8 +82,11 @@ class PvpOverlayService final {
     std::string m_anonKey;
     std::string m_realtimeAccessToken;
     std::string m_mode = "classic";
+    std::string m_context = "versus";
+    std::string m_roomName;
     PvpOverlayPlayerProgressModel m_self;
     PvpOverlayPlayerProgressModel m_opponent;
+    std::vector<PvpOverlayPlayerProgressModel> m_players;
     std::vector<PvpOverlayChatMessageModel> m_chatMessages;
 
     void requestMatch();
@@ -104,7 +107,9 @@ class PvpOverlayService final {
     void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
     std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PvpOverlayPlayerProgressModel const& player) const;
+    std::string participantLabel(std::string const& uid) const;
     std::string getChatSenderLabel(PvpOverlayChatMessageModel const& message) const;
+    std::vector<PvpOverlayPlayerProgressModel> sortedPlayers() const;
     void pushRecentMessage(PvpOverlayChatMessageModel const& message);
     void updateRecentMessages(float dt);
     void refreshLabel();
@@ -114,5 +119,6 @@ class PvpOverlayService final {
     bool isActiveStatus(std::string const& status) const;
     bool isCompletedStatus(std::string const& status) const;
     bool isPlatformerMode() const;
+    bool isCustomRoomMatch() const;
     std::string formatProgressLabel(float progress) const;
 };

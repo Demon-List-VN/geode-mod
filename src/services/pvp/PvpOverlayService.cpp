@@ -49,13 +49,6 @@ std::string formatProgressForMode(float value, std::string const& mode) {
     return formatProgress(value) + "%";
 }
 
-std::string systemParticipantLabel(std::string const& uid, std::string const& currentUid) {
-    if (!uid.empty() && !currentUid.empty() && uid == currentUid) {
-        return "You";
-    }
-
-    return "Opponent";
-}
 } // namespace gdvn::pvp_overlay_detail
 using namespace gdvn::pvp_overlay_detail;
 
@@ -170,6 +163,8 @@ void PvpOverlayService::parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot) 
     m_matchID = snapshot.matchID;
     m_currentUid = snapshot.currentUid;
     m_mode = snapshot.mode == "platformer" ? "platformer" : "classic";
+    m_context = snapshot.context == "custom_room" ? "custom_room" : "versus";
+    m_roomName = snapshot.roomName;
     m_matchEndsAtEpoch = gdvn::utils::date::parseIsoEpochSeconds(snapshot.endsAt);
     m_lastCountdownSeconds = -1;
     auto status = snapshot.status;
@@ -179,12 +174,15 @@ void PvpOverlayService::parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot) 
 
     m_self = {};
     m_opponent = {};
+    m_players.clear();
 
     for (auto const& participant : snapshot.participants) {
         if (participant.valid) {
             PvpOverlayPlayerProgressModel player;
             player.uid = participant.uid;
+            player.name = participant.name;
             player.progress = participant.progress;
+            m_players.push_back(player);
 
             if (!m_currentUid.empty() && player.uid == m_currentUid) {
                 m_self = player;
@@ -386,13 +384,35 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
         return;
     }
 
+    auto existing =
+        std::find_if(m_players.begin(), m_players.end(),
+                     [&row](PvpOverlayPlayerProgressModel const& item) { return item.uid == row.uid; });
+    if (existing == m_players.end()) {
+        PvpOverlayPlayerProgressModel player;
+        player.uid = row.uid;
+        player.name = row.name;
+        player.progress = row.progress;
+        m_players.push_back(player);
+    } else {
+        if (!row.name.empty()) {
+            existing->name = row.name;
+        }
+        existing->progress = std::max(existing->progress, row.progress);
+    }
+
     if (!m_currentUid.empty() && row.uid == m_currentUid) {
         m_self.uid = row.uid;
+        if (!row.name.empty()) {
+            m_self.name = row.name;
+        }
         m_self.progress = std::max(m_self.progress, row.progress);
         return;
     }
 
     m_opponent.uid = row.uid;
+    if (!row.name.empty()) {
+        m_opponent.name = row.name;
+    }
     m_opponent.progress = std::max(m_opponent.progress, row.progress);
     if (row.progress >= 100.0f && m_submitter) {
         m_submitter->flushDeathCount();
@@ -524,6 +544,9 @@ void PvpOverlayService::handleSystemMetadata(PvpMatchSystemMetadataDto const& me
         }
         m_self.playMode = "normal";
         m_opponent.playMode = "normal";
+        for (auto& player : m_players) {
+            player.playMode = "normal";
+        }
         m_hideOverlayForLevelChange = nextLevelID > 0 && nextLevelID != m_levelID;
         if (m_hideOverlayForLevelChange) {
             this->setOverlayVisible(false);
@@ -552,6 +575,12 @@ void PvpOverlayService::handleSystemMetadata(PvpMatchSystemMetadataDto const& me
         }
     }
 
+    for (auto& player : m_players) {
+        if (player.uid == uid) {
+            player.playMode = playMode;
+        }
+    }
+
     this->refreshLabel();
 }
 
@@ -564,7 +593,7 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
     if (kind == "progress") {
         auto progress = metadata.progress;
         auto mode = metadata.mode == "platformer" ? "platformer" : m_mode;
-        auto player = systemParticipantLabel(metadata.uid, m_currentUid);
+        auto player = this->participantLabel(metadata.uid);
         auto formattedProgress = formatProgressForMode(progress, mode);
         if (mode == "platformer") {
             return fmt::format("{} reached {}.", player, formattedProgress);
@@ -580,23 +609,23 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
         }
 
         return fmt::format("{} won the match. Chat will remain open briefly.",
-                           systemParticipantLabel(winnerUid, m_currentUid));
+                           this->participantLabel(winnerUid));
     }
 
     if (kind == "resignation") {
-        auto resigning = systemParticipantLabel(metadata.resigningUid, m_currentUid);
+        auto resigning = this->participantLabel(metadata.resigningUid);
         auto winnerUid = metadata.winnerUid;
         if (winnerUid.empty()) {
             return fmt::format("{} resigned. The match ended.", resigning);
         }
 
         return fmt::format("{} resigned. {} won the match. Chat will remain open briefly.", resigning,
-                           systemParticipantLabel(winnerUid, m_currentUid));
+                           this->participantLabel(winnerUid));
     }
 
     if (kind == "level_change_requested") {
         return fmt::format("{} requested a level change. The level will change if both players agree.",
-                           systemParticipantLabel(metadata.requesterUid, m_currentUid));
+                           this->participantLabel(metadata.requesterUid));
     }
 
     if (kind == "level_changed") {
@@ -615,6 +644,24 @@ std::string PvpOverlayService::formatPlayerLabel(std::string const& label,
                                                  PvpOverlayPlayerProgressModel const& player) const {
     auto modeSuffix = player.playMode == "practice" ? " (practice)" : "";
     return fmt::format("{}{}: {}", label, modeSuffix, formatProgressLabel(player.progress));
+}
+
+std::string PvpOverlayService::participantLabel(std::string const& uid) const {
+    if (!uid.empty() && !m_currentUid.empty() && uid == m_currentUid) {
+        return "You";
+    }
+
+    if (this->isCustomRoomMatch()) {
+        auto found = std::find_if(m_players.begin(), m_players.end(),
+                                  [&uid](PvpOverlayPlayerProgressModel const& player) { return player.uid == uid; });
+        if (found != m_players.end() && !found->name.empty()) {
+            return found->name;
+        }
+
+        return "Player";
+    }
+
+    return "Opponent";
 }
 
 std::string PvpOverlayService::getChatHistoryText() const {
@@ -653,7 +700,19 @@ std::string PvpOverlayService::getChatSenderLabel(PvpOverlayChatMessageModel con
         return "You";
     }
 
-    return "Opponent";
+    return this->participantLabel(message.senderUid);
+}
+
+std::vector<PvpOverlayPlayerProgressModel> PvpOverlayService::sortedPlayers() const {
+    auto players = m_players;
+    std::sort(players.begin(), players.end(), [](auto const& left, auto const& right) {
+        if (left.progress != right.progress) {
+            return left.progress > right.progress;
+        }
+
+        return left.name < right.name;
+    });
+    return players;
 }
 
 void PvpOverlayService::pushRecentMessage(PvpOverlayChatMessageModel const& message) {
@@ -804,8 +863,19 @@ void PvpOverlayService::refreshLabel() {
         return;
     }
 
-    m_overlay->setText(fmt::format("gdvn.net - Versus{}\n{}\n{}", timerLine, formatPlayerLabel("You", m_self),
-                                   formatPlayerLabel("Opponent", m_opponent)));
+    if (this->isCustomRoomMatch()) {
+        auto title = m_roomName.empty() ? "gdvn.net - Custom room" : fmt::format("gdvn.net - Custom room: {}", m_roomName);
+        auto text = title + timerLine;
+        auto players = this->sortedPlayers();
+        for (auto const& player : players) {
+            text += "\n";
+            text += this->formatPlayerLabel(this->participantLabel(player.uid), player);
+        }
+        m_overlay->setText(text);
+    } else {
+        m_overlay->setText(fmt::format("gdvn.net - Versus{}\n{}\n{}", timerLine, formatPlayerLabel("You", m_self),
+                                       formatPlayerLabel("Opponent", m_opponent)));
+    }
     this->setOverlayVisible(m_active);
 }
 
@@ -838,6 +908,10 @@ bool PvpOverlayService::isCompletedStatus(std::string const& status) const {
 
 bool PvpOverlayService::isPlatformerMode() const {
     return m_mode == "platformer";
+}
+
+bool PvpOverlayService::isCustomRoomMatch() const {
+    return m_context == "custom_room";
 }
 
 std::string PvpOverlayService::formatProgressLabel(float progress) const {

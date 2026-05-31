@@ -18,6 +18,11 @@ class PvpMatchAdapter {
         dto.matchID = static_cast<int>(getNumber(json, "matchId"));
         dto.currentUid = getString(json, "currentUid");
         dto.mode = getString(json, "mode") == "platformer" ? "platformer" : "classic";
+        dto.context = getString(json, "context");
+        dto.roomName = getString(json, "roomName");
+        if (dto.roomName.empty() && json["room"].isObject()) {
+            dto.roomName = getString(json["room"], "name");
+        }
         dto.endsAt = getString(json, "endsAt");
         dto.status = getString(json, "status");
 
@@ -81,6 +86,16 @@ class PvpMatchAdapter {
     static PvpMatchPlayerProgressDto playerProgressFromJson(matjson::Value const& json) {
         PvpMatchPlayerProgressDto dto;
         dto.uid = getString(json, "uid");
+        dto.name = getString(json, "name");
+        if (dto.name.empty()) {
+            dto.name = getString(json, "displayName");
+        }
+        if (dto.name.empty() && json["player"].isObject()) {
+            dto.name = getString(json["player"], "name");
+        }
+        if (dto.name.empty() && json["players"].isObject()) {
+            dto.name = getString(json["players"], "name");
+        }
         dto.progress = getNumber(json, "progress");
         dto.valid = !dto.uid.empty();
         return dto;
@@ -144,6 +159,12 @@ class PvpMatchAdapter {
 
         if (!json["result"].isNull() && json["result"].isObject()) {
             dto.progress = std::max(dto.progress, getNumber(json["result"], "progress"));
+        }
+        if (dto.name.empty() && json["player"].isObject()) {
+            dto.name = getString(json["player"], "name");
+        }
+        if (dto.name.empty() && json["players"].isObject()) {
+            dto.name = getString(json["players"], "name");
         }
 
         return dto;

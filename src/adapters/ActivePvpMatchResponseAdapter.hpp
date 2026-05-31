@@ -22,6 +22,14 @@ class ActivePvpMatchResponseAdapter {
             dto.mode = json["mode"].asString().unwrapOrDefault();
         }
 
+        if (json["context"].isString()) {
+            dto.context = json["context"].asString().unwrapOrDefault();
+        }
+
+        if (json["roomName"].isString()) {
+            dto.roomName = json["roomName"].asString().unwrapOrDefault();
+        }
+
         return dto;
     }
 };
