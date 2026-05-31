@@ -26,7 +26,9 @@ endif()
 
 target_compile_definitions(
   ${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:BUILD_RELEASE>
-                          $<$<CONFIG:RelWithDebInfo>:BUILD_RELWITHDEBINFO>)
+                          $<$<CONFIG:RelWithDebInfo>:BUILD_RELWITHDEBINFO>
+                          $<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN>
+                          $<$<PLATFORM_ID:Windows>:NOMINMAX>)
 
 if(PROJECT_IS_TOP_LEVEL)
   target_compile_definitions(${PROJECT_NAME} PRIVATE BI_EXPORTING)

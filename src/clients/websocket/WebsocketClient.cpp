@@ -1,11 +1,12 @@
 #include "WebsocketClient.hpp"
 
-#include <Geode/loader/Loader.hpp>
 #include <ixwebsocket/IXNetSystem.h>
 #include <ixwebsocket/IXSocketTLSOptions.h>
 #include <ixwebsocket/IXWebSocket.h>
 #include <ixwebsocket/IXWebSocketMessage.h>
 #include <ixwebsocket/IXWebSocketMessageType.h>
+
+#include <Geode/loader/Loader.hpp>
 
 #include <atomic>
 #include <mutex>
