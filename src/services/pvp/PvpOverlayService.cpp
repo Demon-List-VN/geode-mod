@@ -84,27 +84,6 @@ bool PvpOverlayService::isChatMuted() const {
     return m_chatMuted;
 }
 
-void PvpOverlayService::applyLocalScoreDelta(int matchID, float delta) {
-    if (m_cleanedUp || matchID <= 0 || matchID != m_matchID || m_scoringMode != "score" || m_mode == "platformer"
-        || !std::isfinite(delta) || delta <= 0.0f) {
-        return;
-    }
-
-    m_self.progress += delta;
-
-    if (!m_currentUid.empty()) {
-        auto existing = std::find_if(
-            m_players.begin(), m_players.end(),
-            [this](PvpOverlayPlayerProgressModel const& player) { return player.uid == m_currentUid; }
-        );
-        if (existing != m_players.end()) {
-            existing->progress = m_self.progress;
-        }
-    }
-
-    this->refreshLabel();
-}
-
 bool PvpOverlayService::hasPvpMatch() const {
     return m_matchID > 0 && m_chatOpen && !m_cleanedUp;
 }
