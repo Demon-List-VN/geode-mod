@@ -558,7 +558,7 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
     if (message.type == "system") {
         auto metadata = PvpMatchAdapter::systemMetadataFromJson(dto.metadata);
         auto kind = metadata.kind;
-        isProgressSystemMessage = kind == "progress";
+        isProgressSystemMessage = kind == "progress" || kind == "hp_damage";
         isHiddenSystemMessage = kind == "play_mode";
         this->handleSystemMetadata(metadata);
 
@@ -671,6 +671,12 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
     }
 
     auto kind = metadata.kind;
+    if (kind == "hp_damage") {
+        auto player = this->participantLabel(metadata.uid);
+        return fmt::format("{} reached {} progress and dealt {} DMG.", player,
+                           formatProgressForMode(metadata.progress, "classic"), formatProgress(metadata.damage));
+    }
+
     if (kind == "progress") {
         auto progress = metadata.progress;
         auto mode = metadata.mode == "platformer" ? "platformer" : m_mode;
@@ -957,7 +963,7 @@ void PvpOverlayService::refreshLabel() {
     }
 
     if (this->isCustomRoomMatch()) {
-        auto title = m_roomName.empty() ? "gdvn.net - Custom room" : fmt::format("gdvn.net - Custom room: {}", m_roomName);
+        auto title = "gdvn.net - Custom room";
         auto text = title + timerLine;
         auto players = this->sortedPlayers();
         for (auto const& player : players) {

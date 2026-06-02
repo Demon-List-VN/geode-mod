@@ -132,6 +132,7 @@ class PvpMatchAdapter {
         dto.uid = getString(json, "uid");
         dto.playMode = getString(json, "playMode");
         dto.progress = getNumber(json, "progress");
+        dto.damage = getNumber(json, "damage");
         dto.mode = getString(json, "mode");
         dto.scoringMode = getScoringMode(json);
         dto.targetScore = static_cast<int>(getTargetScore(json));
