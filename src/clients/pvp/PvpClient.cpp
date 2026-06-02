@@ -25,7 +25,8 @@ std::string singleDeathCount(float progress) {
 }
 } // namespace
 
-async::TaskHolder<web::WebResponse> PvpClient::s_putHolder;
+async::TaskHolder<web::WebResponse> PvpClient::s_putPlayModeHolder;
+async::TaskHolder<web::WebResponse> PvpClient::s_putProgressHolder;
 std::vector<std::shared_ptr<async::TaskHolder<web::WebResponse>>> PvpClient::s_postHolders;
 std::vector<std::shared_ptr<async::TaskHolder<web::WebResponse>>> PvpClient::s_getMatchHolders;
 async::TaskHolder<web::WebResponse> PvpClient::s_getHolder;
@@ -61,7 +62,7 @@ void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback c
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    PvpClient::s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
+    PvpClient::s_putPlayModeHolder.spawn(req.put(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });
@@ -78,7 +79,7 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
-    PvpClient::s_putHolder.spawn(req.put(url), [callback](web::WebResponse res) {
+    PvpClient::s_putProgressHolder.spawn(req.put(url), [callback](web::WebResponse res) {
         EmptyResponseDto dto;
         callback(dto, res);
     });

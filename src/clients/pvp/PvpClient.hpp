@@ -31,7 +31,8 @@ class PvpClient {
     static void postMessage(int matchID, std::string const& content, PostMessageCallback callback);
 
   private:
-    static async::TaskHolder<web::WebResponse> s_putHolder;
+    static async::TaskHolder<web::WebResponse> s_putPlayModeHolder;
+    static async::TaskHolder<web::WebResponse> s_putProgressHolder;
     static std::vector<std::shared_ptr<async::TaskHolder<web::WebResponse>>> s_postHolders;
     static std::vector<std::shared_ptr<async::TaskHolder<web::WebResponse>>> s_getMatchHolders;
     static async::TaskHolder<web::WebResponse> s_getHolder;
