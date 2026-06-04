@@ -20,9 +20,9 @@ CCLabelBMFont* LevelInfoLayerFactory::createLabel(GJGameLevel* level, std::strin
     return label;
 }
 
-CCMenu* LevelInfoLayerFactory::createButton(std::vector<std::string> const& labels, GJGameLevel* level,
+CCMenu* LevelInfoLayerFactory::createButton(std::vector<std::string> const& labels, int levelID, int coinCount,
                                             CCObject* target, SEL_MenuHandler callback) {
-    int offset = (level->m_coins == 0) ? 17 : 4;
+    int offset = (coinCount == 0) ? 17 : 4;
     auto size = CCDirector::sharedDirector()->getWinSize();
 
     std::string text;
@@ -44,7 +44,7 @@ CCMenu* LevelInfoLayerFactory::createButton(std::vector<std::string> const& labe
 
     auto btn = CCMenuItemSpriteExtra::create(label, target, callback);
 
-    btn->setTag(level->m_levelID.value());
+    btn->setTag(levelID);
 
     auto menu = CCMenu::create();
 

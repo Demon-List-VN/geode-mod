@@ -6,6 +6,8 @@
 #include <Geode/modify/LevelInfoLayer.hpp> // DO NOT REMOVE
 #include <Geode/utils/web.hpp>
 
+#include <memory>
+
 using namespace geode::prelude;
 
 namespace {
@@ -98,9 +100,27 @@ std::vector<std::string> getListInfoLabels(std::vector<LevelListDto> const& list
 } // namespace
 
 class $modify(GDVNLevelInfoLayer, LevelInfoLayer) {
+    struct LevelInfoRequestState {
+        bool active = true;
+        CCLabelBMFont* loadingLabel = nullptr;
+    };
+
     struct Fields {
         bool m_confirmedLoggedOutPlay = false;
+        std::shared_ptr<LevelInfoRequestState> m_levelInfoRequest;
     };
+
+    void cancelLevelInfoRequest() {
+        auto state = m_fields->m_levelInfoRequest;
+        if (!state) {
+            return;
+        }
+
+        state->active = false;
+        if (state->loadingLabel && state->loadingLabel->getParent()) {
+            state->loadingLabel->removeFromParent();
+        }
+    }
 
     bool init(GJGameLevel* level, bool a) {
         if (!LevelInfoLayer::init(level, a)) {
@@ -108,27 +128,45 @@ class $modify(GDVNLevelInfoLayer, LevelInfoLayer) {
         }
 
         int id = level->m_levelID.value();
+        int coinCount = level->m_coins;
         auto showLevelInfo = Mod::get()->getSettingValue<bool>("show-level-info");
 
         if (showLevelInfo) {
             auto loadingLabel = gdvn::level_info::LevelInfoLayerFactory::createLabel(level, "...", 0);
+            loadingLabel->retain();
 
             this->addChild(loadingLabel);
 
             bool isLoggedIn = AuthService::isLoggedIn();
+            auto state = std::make_shared<LevelInfoRequestState>();
+            state->loadingLabel = loadingLabel;
+            m_fields->m_levelInfoRequest = state;
 
             auto layer = this;
             layer->retain();
 
-            LevelService::getLevel(id, [id, isLoggedIn, layer, level, loadingLabel](LevelInfoResponseDto const& model,
+            LevelService::getLevel(id, [id, coinCount, isLoggedIn, layer, state](LevelInfoResponseDto const& model,
                                                                                     web::WebResponse& res) {
-                auto cleanup = [layer, loadingLabel]() {
-                    if (loadingLabel) {
-                        loadingLabel->removeFromParent();
+                auto cleanup = [layer, state]() {
+                    if (state->loadingLabel) {
+                        if (state->loadingLabel->getParent()) {
+                            state->loadingLabel->removeFromParent();
+                        }
+                        state->loadingLabel->release();
+                        state->loadingLabel = nullptr;
+                    }
+
+                    if (layer->m_fields->m_levelInfoRequest == state) {
+                        layer->m_fields->m_levelInfoRequest.reset();
                     }
 
                     layer->release();
                 };
+
+                if (!state->active || !layer->isRunning()) {
+                    cleanup();
+                    return;
+                }
 
                 if (!res.ok()) {
                     cleanup();
@@ -145,7 +183,7 @@ class $modify(GDVNLevelInfoLayer, LevelInfoLayer) {
 
                 if (!labels.empty()) {
                     auto btn = gdvn::level_info::LevelInfoLayerFactory::createButton(
-                        labels, level, layer, menu_selector(GDVNLevelInfoLayer::onGDVNLevelInfo));
+                        labels, id, coinCount, layer, menu_selector(GDVNLevelInfoLayer::onGDVNLevelInfo));
 
                     layer->addChild(btn);
                 }
@@ -155,6 +193,11 @@ class $modify(GDVNLevelInfoLayer, LevelInfoLayer) {
         }
 
         return true;
+    }
+
+    void onExit() {
+        this->cancelLevelInfoRequest();
+        LevelInfoLayer::onExit();
     }
 
     void onGDVNLevelInfo(CCObject* sender) {
