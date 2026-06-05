@@ -67,6 +67,7 @@ class PvpOverlayService final {
 
     static constexpr float CHAT_GRACE_SECONDS = 3.0f * 60.0f;
     static constexpr float MESSAGE_REFRESH_COALESCE = 0.2f;
+    static constexpr float POWERUP_STATE_REFRESH_COALESCE = 0.25f;
     static constexpr int MAX_CHAT_MESSAGE_LENGTH = 500;
     static constexpr int MESSAGE_FETCH_LIMIT = 100;
     static PvpOverlayService* s_activeOverlay;
@@ -84,11 +85,14 @@ class PvpOverlayService final {
     int m_reconnectAttempts = 0;
     float m_reconnectTimer = -1.0f;
     float m_messageRefreshTimer = -1.0f;
+    float m_powerupStateRefreshTimer = -1.0f;
     float m_chatGraceTimer = -1.0f;
     bool m_active = false;
     bool m_chatOpen = false;
     bool m_chatMuted = false;
     bool m_chatSending = false;
+    bool m_powerupStateLoaded = false;
+    bool m_powerupStateRequesting = false;
     bool m_cleanedUp = false;
     bool m_connecting = false;
     bool m_requestingRealtimeToken = false;
@@ -115,6 +119,7 @@ class PvpOverlayService final {
     int m_finalizeAliveCount = 0;
     std::string m_context = "versus";
     std::string m_roomName;
+    PvpPowerupStateDto m_powerupState;
     PvpOverlayPlayerProgressModel m_self;
     PvpOverlayPlayerProgressModel m_opponent;
     std::vector<PvpOverlayPlayerProgressModel> m_players;
@@ -124,6 +129,9 @@ class PvpOverlayService final {
     void requestMatch();
     void requestRealtimeToken();
     void requestMessages(bool animateNew, bool incremental);
+    void refreshPowerupState();
+    void schedulePowerupStateRefresh();
+    void applyPowerupState(PvpPowerupStateDto const& state);
     void connectRealtime();
     void closeRealtime();
     void scheduleReconnect();
@@ -139,6 +147,7 @@ class PvpOverlayService final {
     void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
     std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PvpOverlayPlayerProgressModel const& player) const;
+    std::string formatPowerupManaLine() const;
     std::string participantLabel(std::string const& uid) const;
     std::string getChatSenderLabel(PvpOverlayChatMessageModel const& message) const;
     std::vector<PvpOverlayPlayerProgressModel> sortedPlayers() const;

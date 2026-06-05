@@ -185,8 +185,21 @@ void PvpOverlayService::requestPowerupState(std::function<void(PvpPowerupStateDt
         return;
     }
 
-    PvpClient::getPowerupState(m_matchID, [callback](PvpPowerupStateDto const& state, web::WebResponse& res) {
-        callback(state, res.ok() && state.valid);
+    m_powerupStateRequesting = true;
+    PvpClient::getPowerupState(m_matchID, [this, callback](PvpPowerupStateDto const& state, web::WebResponse& res) {
+        m_powerupStateRequesting = false;
+
+        if (m_cleanedUp) {
+            callback({}, false);
+            return;
+        }
+
+        auto ok = res.ok() && state.valid;
+        if (ok) {
+            this->applyPowerupState(state);
+        }
+
+        callback(state, ok);
     });
 }
 
@@ -200,8 +213,18 @@ void PvpOverlayService::castPowerupSkill(std::string const& skill,
     }
 
     PvpClient::castPowerup(m_matchID, skill, targetUid, randomTarget,
-                           [callback](PvpPowerupCastResponseDto const& response, web::WebResponse& res) {
-                               callback(response, res.ok() && response.valid);
+                           [this, callback](PvpPowerupCastResponseDto const& response, web::WebResponse& res) {
+                               if (m_cleanedUp) {
+                                   callback({}, false);
+                                   return;
+                               }
+
+                               auto ok = res.ok() && response.valid;
+                               if (ok && response.state.valid) {
+                                   this->applyPowerupState(response.state);
+                               }
+
+                               callback(response, ok);
                            });
 }
 
@@ -324,6 +347,10 @@ void PvpOverlayService::parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot) 
     m_finalizeAliveCount = std::max(0, snapshot.finalizeAliveCount);
     m_context = snapshot.context == "custom_room" ? "custom_room" : "versus";
     m_roomName = snapshot.roomName;
+    m_powerupState = {};
+    m_powerupStateLoaded = false;
+    m_powerupStateRequesting = false;
+    m_powerupStateRefreshTimer = -1.0f;
     m_matchEndsAtEpoch = gdvn::utils::date::parseIsoEpochSeconds(snapshot.endsAt);
     m_lastCountdownSeconds = -1;
     auto status = snapshot.status;
@@ -360,6 +387,10 @@ void PvpOverlayService::parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot) 
 
     if (m_matchID > 0) {
         this->requestMessages(false, false);
+    }
+
+    if (this->isPowerupMode()) {
+        this->refreshPowerupState();
     }
 }
 
@@ -421,6 +452,36 @@ void PvpOverlayService::requestMessages(bool animateNew, bool incremental) {
 
                                this->handleMessagesPayload(messages, animateNew);
                            });
+}
+
+void PvpOverlayService::refreshPowerupState() {
+    if (m_cleanedUp || !this->isPowerupMode() || m_powerupStateRequesting) {
+        return;
+    }
+
+    this->requestPowerupState([](PvpPowerupStateDto const&, bool) {});
+}
+
+void PvpOverlayService::schedulePowerupStateRefresh() {
+    if (m_cleanedUp || !this->isPowerupMode()) {
+        return;
+    }
+
+    m_powerupStateRefreshTimer = POWERUP_STATE_REFRESH_COALESCE;
+}
+
+void PvpOverlayService::applyPowerupState(PvpPowerupStateDto const& state) {
+    if (!state.valid) {
+        return;
+    }
+
+    m_powerupState = state;
+    m_powerupStateLoaded = true;
+    this->refreshLabel();
+
+    if (m_powerupPopup) {
+        m_powerupPopup->applyState(state);
+    }
 }
 
 void PvpOverlayService::submitChatMessage(std::string content) {
@@ -516,7 +577,11 @@ void PvpOverlayService::handleRealtimeMessage(PvpMatchRealtimeMessageDto const& 
     }
 
     if (message.table == gdvn::consts::Table::PVP_MATCH_RESULTS) {
-        this->handleResultRow(PvpMatchAdapter::playerProgressFromJson(message.row));
+        auto row = PvpMatchAdapter::playerProgressFromJson(message.row);
+        this->handleResultRow(row);
+        if (row.valid && row.uid == m_currentUid && m_scoringMode == "powerup") {
+            this->schedulePowerupStateRefresh();
+        }
         this->refreshLabel();
         this->scheduleMessageRefresh();
     } else if (message.table == gdvn::consts::WebsocketEvent::MATCH_TABLE) {
@@ -947,6 +1012,20 @@ std::string PvpOverlayService::formatPlayerLabel(std::string const& label,
     return fmt::format("{}{}: {}", label, modeSuffix, formatProgressLabel(player.progress));
 }
 
+std::string PvpOverlayService::formatPowerupManaLine() const {
+    if (!this->isPowerupMode()) {
+        return "";
+    }
+
+    if (!m_powerupStateLoaded) {
+        return "\nMana: --/100";
+    }
+
+    auto maxMana = std::max(1, m_powerupState.maxMana);
+    auto mana = std::max(0, std::min(m_powerupState.mana, maxMana));
+    return fmt::format("\nMana: {}/{}", mana, maxMana);
+}
+
 std::string PvpOverlayService::participantLabel(std::string const& uid) const {
     if (!uid.empty() && !m_currentUid.empty() && uid == m_currentUid) {
         return "You";
@@ -1123,6 +1202,14 @@ void PvpOverlayService::update(float dt) {
         }
     }
 
+    if (m_powerupStateRefreshTimer >= 0.0f) {
+        m_powerupStateRefreshTimer -= dt;
+        if (m_powerupStateRefreshTimer <= 0.0f) {
+            m_powerupStateRefreshTimer = -1.0f;
+            this->refreshPowerupState();
+        }
+    }
+
     if (m_reconnectTimer >= 0.0f) {
         m_reconnectTimer -= dt;
         if (m_reconnectTimer <= 0.0f) {
@@ -1203,6 +1290,7 @@ void PvpOverlayService::refreshLabel() {
             : -1;
     auto timerLine =
         countdownSeconds >= 0 ? fmt::format("\nTime: {}", gdvn::utils::date::formatCountdown(countdownSeconds)) : "";
+    auto manaLine = this->formatPowerupManaLine();
     m_lastCountdownSeconds = countdownSeconds;
 
     if (m_hideOverlayForLevelChange) {
@@ -1212,7 +1300,7 @@ void PvpOverlayService::refreshLabel() {
 
     if (this->isCustomRoomMatch()) {
         auto title = "gdvn.net - Custom room";
-        auto text = title + timerLine;
+        auto text = title + timerLine + manaLine;
         auto players = this->sortedPlayers();
         for (auto const& player : players) {
             text += "\n";
@@ -1220,8 +1308,8 @@ void PvpOverlayService::refreshLabel() {
         }
         m_overlay->setText(text);
     } else {
-        m_overlay->setText(fmt::format("gdvn.net - Versus{}\n{}\n{}", timerLine, formatPlayerLabel("You", m_self),
-                                       formatPlayerLabel("Opponent", m_opponent)));
+        m_overlay->setText(fmt::format("gdvn.net - Versus{}{}\n{}\n{}", timerLine, manaLine,
+                                       formatPlayerLabel("You", m_self), formatPlayerLabel("Opponent", m_opponent)));
     }
     this->setOverlayVisible(m_active);
 }

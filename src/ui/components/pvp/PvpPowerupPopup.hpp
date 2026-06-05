@@ -18,6 +18,7 @@ class PvpPowerupPopup final : public Popup {
     static PvpPowerupPopup* create(PvpOverlayService* overlay);
 
     void refresh();
+    void applyState(PvpPowerupStateDto const& state);
     void closeFromOverlay();
 
   protected:

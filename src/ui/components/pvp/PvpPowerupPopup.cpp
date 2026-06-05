@@ -98,6 +98,15 @@ void PvpPowerupPopup::refresh() {
     });
 }
 
+void PvpPowerupPopup::applyState(PvpPowerupStateDto const& state) {
+    if (!state.valid) {
+        return;
+    }
+
+    m_state = state;
+    this->updateControls();
+}
+
 void PvpPowerupPopup::closeFromOverlay() {
     m_overlay = nullptr;
     this->onClose(nullptr);
