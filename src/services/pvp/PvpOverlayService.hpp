@@ -19,6 +19,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 using namespace geode::prelude;
@@ -53,6 +54,8 @@ class PvpOverlayService final {
                           std::string const& targetUid,
                           bool randomTarget,
                           std::function<void(PvpPowerupCastResponseDto const&, bool)> callback);
+    bool shouldBlockButtonDown(int button, bool isPlayer1);
+    bool shouldBlockButtonRelease(int button, bool isPlayer1);
     void notifyChatPopupClosed(PvpChatPopup* popup);
     void notifyPowerupPopupClosed(PvpPowerupPopup* popup);
     std::string getChatHistoryText() const;
@@ -102,6 +105,7 @@ class PvpOverlayService final {
     bool m_player2WasVisible = true;
     float m_flashbangTimer = -1.0f;
     float m_invisibleTimer = -1.0f;
+    float m_doubleClickTimer = -1.0f;
     CCLayerColor* m_flashbangOverlay = nullptr;
 
     std::int64_t m_latestMessageID = 0;
@@ -125,6 +129,8 @@ class PvpOverlayService final {
     std::vector<PvpOverlayPlayerProgressModel> m_players;
     std::vector<PvpOverlayChatMessageModel> m_chatMessages;
     std::vector<PendingRevealMessage> m_pendingRevealMessages;
+    std::unordered_set<int> m_doubleClickWaitingButtons;
+    std::unordered_set<int> m_doubleClickBlockedButtons;
 
     void requestMatch();
     void requestRealtimeToken();
@@ -159,6 +165,10 @@ class PvpOverlayService final {
     void clearFlashbang();
     void startInvisible(float durationSeconds);
     void clearInvisible();
+    void startDoubleClick(float durationSeconds);
+    void clearDoubleClick();
+    void openPauseLayer();
+    void forceReset();
     void refreshLabel();
     void refreshChatVisibility();
     void setOverlayVisible(bool visible);

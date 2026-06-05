@@ -370,6 +370,19 @@ void PvpSubmitterService::flushDeathCount() {
     submitDeathCount(m_state);
 }
 
+void PvpSubmitterService::resetProgressState() {
+    if (!m_state) {
+        return;
+    }
+
+    m_state->best = 0.0f;
+    m_state->pendingDeathCount = {};
+    m_state->pendingScoreSubmissions.clear();
+    m_state->completionPending = false;
+    m_state->deathSubmitInFlight.store(false);
+    m_state->scoreSubmitInFlight.store(false);
+}
+
 void PvpSubmitterService::recordCheckpoint(int count) {
     if (!m_state || count <= m_state->best) {
         return;

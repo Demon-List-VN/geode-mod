@@ -35,6 +35,9 @@ class PvpPowerupPopup final : public Popup {
     CCMenuItemSpriteExtra* m_flashButton = nullptr;
     CCMenuItemSpriteExtra* m_invisibleButton = nullptr;
     CCMenuItemSpriteExtra* m_shieldButton = nullptr;
+    CCMenuItemSpriteExtra* m_pauseButton = nullptr;
+    CCMenuItemSpriteExtra* m_doubleClickButton = nullptr;
+    CCMenuItemSpriteExtra* m_forceResetButton = nullptr;
     std::string m_selectedTargetUid;
     bool m_randomTarget = true;
     bool m_loading = false;

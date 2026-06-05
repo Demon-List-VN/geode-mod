@@ -57,6 +57,7 @@ class PvpSubmitterService {
     void record(float progress);
     void recordDeath(float progress);
     void flushDeathCount();
+    void resetProgressState();
     void recordCheckpoint(int count);
     void completePlatformer(int count);
 };

@@ -77,6 +77,22 @@ bool isScoreLikeScoringMode(std::string const& mode) {
     return mode == "score" || mode == "powerup";
 }
 
+std::string powerupSkillLabel(std::string const& skill) {
+    if (skill == "invisible") {
+        return "Invisible";
+    }
+    if (skill == "pause") {
+        return "Pause";
+    }
+    if (skill == "double_click") {
+        return "Double click";
+    }
+    if (skill == "force_reset") {
+        return "Force reset";
+    }
+    return "Flashbang";
+}
+
 } // namespace gdvn::pvp_overlay_detail
 using namespace gdvn::pvp_overlay_detail;
 
@@ -255,6 +271,35 @@ void PvpOverlayService::notifyPowerupPopupClosed(PvpPowerupPopup* popup) {
     if (m_powerupPopup == popup) {
         m_powerupPopup = nullptr;
     }
+}
+
+bool PvpOverlayService::shouldBlockButtonDown(int button, bool isPlayer1) {
+    if (m_doubleClickTimer < 0.0f) {
+        return false;
+    }
+
+    const int key = button * 2 + (isPlayer1 ? 1 : 0);
+    if (m_doubleClickWaitingButtons.erase(key) > 0) {
+        m_doubleClickBlockedButtons.erase(key);
+        return false;
+    }
+
+    m_doubleClickWaitingButtons.insert(key);
+    m_doubleClickBlockedButtons.insert(key);
+    return true;
+}
+
+bool PvpOverlayService::shouldBlockButtonRelease(int button, bool isPlayer1) {
+    if (m_doubleClickTimer < 0.0f) {
+        return false;
+    }
+
+    const int key = button * 2 + (isPlayer1 ? 1 : 0);
+    if (m_doubleClickBlockedButtons.erase(key) > 0) {
+        return true;
+    }
+
+    return false;
 }
 
 void PvpOverlayService::requestMatch() {
@@ -621,7 +666,9 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
         if (!row.name.empty()) {
             existing->name = row.name;
         }
-        existing->progress = m_scoringMode == "hp" ? row.progress : std::max(existing->progress, row.progress);
+        existing->progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+            ? row.progress
+            : std::max(existing->progress, row.progress);
     }
 
     if (!m_currentUid.empty() && row.uid == m_currentUid) {
@@ -629,7 +676,9 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
         if (!row.name.empty()) {
             m_self.name = row.name;
         }
-        m_self.progress = m_scoringMode == "hp" ? row.progress : std::max(m_self.progress, row.progress);
+        m_self.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+            ? row.progress
+            : std::max(m_self.progress, row.progress);
         return;
     }
 
@@ -637,7 +686,9 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
     if (!row.name.empty()) {
         m_opponent.name = row.name;
     }
-    m_opponent.progress = m_scoringMode == "hp" ? row.progress : std::max(m_opponent.progress, row.progress);
+    m_opponent.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+        ? row.progress
+        : std::max(m_opponent.progress, row.progress);
     if (m_scoringMode == "progress" && row.progress >= 100.0f && m_submitter) {
         m_submitter->flushDeathCount();
     }
@@ -837,6 +888,11 @@ void PvpOverlayService::handlePowerupSkill(PvpMatchSystemMetadataDto const& meta
     }
 
     auto effect = metadata.payloadEffect.empty() ? metadata.skill : metadata.payloadEffect;
+    auto expiresAtEpoch = gdvn::utils::date::parseIsoEpochSeconds(metadata.payloadExpiresAt);
+    if (expiresAtEpoch > 0 && expiresAtEpoch < gdvn::utils::date::currentEpochSeconds()) {
+        return;
+    }
+
     auto durationMs = metadata.payloadDurationMs > 0 ? metadata.payloadDurationMs : metadata.durationMs;
     auto durationSeconds = std::max(0.1f, static_cast<float>(durationMs > 0 ? durationMs : 1000) / 1000.0f);
 
@@ -847,6 +903,24 @@ void PvpOverlayService::handlePowerupSkill(PvpMatchSystemMetadataDto const& meta
 
     if (effect == "invisible") {
         this->startInvisible(durationSeconds);
+        return;
+    }
+
+    if (effect == "pause") {
+        this->openPauseLayer();
+        return;
+    }
+
+    if (effect == "double_click") {
+        this->startDoubleClick(durationSeconds);
+        return;
+    }
+
+    if (effect == "force_reset") {
+        auto suppressedUntilEpoch = gdvn::utils::date::parseIsoEpochSeconds(metadata.payloadSuppressedUntil);
+        if (suppressedUntilEpoch <= 0 || suppressedUntilEpoch >= gdvn::utils::date::currentEpochSeconds()) {
+            this->forceReset();
+        }
     }
 }
 
@@ -916,6 +990,33 @@ void PvpOverlayService::clearInvisible() {
     m_invisibleActive = false;
 }
 
+void PvpOverlayService::startDoubleClick(float durationSeconds) {
+    m_doubleClickTimer = durationSeconds;
+    m_doubleClickWaitingButtons.clear();
+    m_doubleClickBlockedButtons.clear();
+}
+
+void PvpOverlayService::clearDoubleClick() {
+    m_doubleClickTimer = -1.0f;
+    m_doubleClickWaitingButtons.clear();
+    m_doubleClickBlockedButtons.clear();
+}
+
+void PvpOverlayService::openPauseLayer() {
+    if (m_layer) {
+        m_layer->pauseGame(true);
+    }
+}
+
+void PvpOverlayService::forceReset() {
+    if (m_submitter) {
+        m_submitter->resetProgressState();
+    }
+    if (m_layer) {
+        m_layer->resetLevel();
+    }
+}
+
 std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const {
     if (!metadata.valid) {
         return "Match update.";
@@ -953,13 +1054,13 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
     }
 
     if (kind == "powerup_skill") {
-        auto skill = metadata.skill == "invisible" ? "Invisible" : "Flashbang";
+        auto skill = powerupSkillLabel(metadata.skill);
         return fmt::format("{} used {} on {}.", this->participantLabel(metadata.casterUid), skill,
                            this->participantLabel(metadata.targetUid));
     }
 
     if (kind == "powerup_blocked") {
-        auto skill = metadata.skill == "invisible" ? "Invisible" : "Flashbang";
+        auto skill = powerupSkillLabel(metadata.skill);
         return fmt::format("{}'s Shield blocked {}'s {}.", this->participantLabel(metadata.targetUid),
                            this->participantLabel(metadata.casterUid), skill);
     }
@@ -1168,6 +1269,13 @@ void PvpOverlayService::update(float dt) {
         m_invisibleTimer -= dt;
         if (m_invisibleTimer <= 0.0f) {
             this->clearInvisible();
+        }
+    }
+
+    if (m_doubleClickTimer >= 0.0f) {
+        m_doubleClickTimer -= dt;
+        if (m_doubleClickTimer <= 0.0f) {
+            this->clearDoubleClick();
         }
     }
 

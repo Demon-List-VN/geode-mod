@@ -60,7 +60,10 @@ class PvpPowerupAdapter {
         return {
             {"flashbang", 60, 1000, "flashbang", true},
             {"invisible", 100, 2000, "invisible", true},
-            {"shield", 50, 20000, "shield", false}
+            {"shield", 50, 20000, "shield", false},
+            {"pause", 40, 0, "pause", true},
+            {"double_click", 50, 10000, "double_click", true},
+            {"force_reset", 100, 0, "force_reset", true}
         };
     }
 
