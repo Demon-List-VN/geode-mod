@@ -56,6 +56,7 @@ class PvpOverlayService final {
                           std::function<void(PvpPowerupCastResponseDto const&, bool)> callback);
     bool shouldBlockButtonDown(int button, bool isPlayer1);
     bool shouldBlockButtonRelease(int button, bool isPlayer1);
+    void registerForceResetClick();
     void notifyChatPopupClosed(PvpChatPopup* popup);
     void notifyPowerupPopupClosed(PvpPowerupPopup* popup);
     std::string getChatHistoryText() const;
@@ -106,6 +107,7 @@ class PvpOverlayService final {
     float m_flashbangTimer = -1.0f;
     float m_invisibleTimer = -1.0f;
     float m_doubleClickTimer = -1.0f;
+    float m_forceResetTimer = -1.0f;
     CCLayerColor* m_flashbangOverlay = nullptr;
 
     std::int64_t m_latestMessageID = 0;
@@ -131,6 +133,8 @@ class PvpOverlayService final {
     std::vector<PendingRevealMessage> m_pendingRevealMessages;
     std::unordered_set<int> m_doubleClickWaitingButtons;
     std::unordered_set<int> m_doubleClickBlockedButtons;
+    int m_forceResetClicks = 0;
+    int m_forceResetRequiredClicks = 10;
 
     void requestMatch();
     void requestRealtimeToken();
@@ -153,7 +157,7 @@ class PvpOverlayService final {
     void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
     std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PvpOverlayPlayerProgressModel const& player) const;
-    std::string formatPowerupManaLine() const;
+    std::string formatPlayerMana(std::string const& uid) const;
     std::string participantLabel(std::string const& uid) const;
     std::string getChatSenderLabel(PvpOverlayChatMessageModel const& message) const;
     std::vector<PvpOverlayPlayerProgressModel> sortedPlayers() const;
@@ -167,6 +171,8 @@ class PvpOverlayService final {
     void clearInvisible();
     void startDoubleClick(float durationSeconds);
     void clearDoubleClick();
+    void startForceResetChallenge(PvpMatchSystemMetadataDto const& metadata, float durationSeconds);
+    void clearForceResetChallenge();
     void openPauseLayer();
     void forceReset();
     void refreshLabel();

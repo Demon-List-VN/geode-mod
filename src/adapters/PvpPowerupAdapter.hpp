@@ -26,6 +26,15 @@ class PvpPowerupAdapter {
         dto.shieldCharges = static_cast<int>(getInteger(json, "shieldCharges"));
         dto.shieldActive = getBool(json, "shieldActive");
 
+        if (json["playerMana"].isArray()) {
+            for (auto const& playerManaJson : json["playerMana"].asArray().unwrap()) {
+                auto playerMana = playerManaFromJson(playerManaJson);
+                if (!playerMana.uid.empty()) {
+                    dto.playerMana.push_back(playerMana);
+                }
+            }
+        }
+
         if (json["skills"].isArray()) {
             for (auto const& skillJson : json["skills"].asArray().unwrap()) {
                 auto skill = skillFromJson(skillJson);
@@ -58,16 +67,31 @@ class PvpPowerupAdapter {
 
     static std::vector<PvpPowerupSkillDto> defaultSkills() {
         return {
-            {"flashbang", 60, 1000, "flashbang", true},
-            {"invisible", 100, 2000, "invisible", true},
-            {"shield", 50, 20000, "shield", false},
-            {"pause", 40, 0, "pause", true},
-            {"double_click", 50, 10000, "double_click", true},
-            {"force_reset", 100, 0, "force_reset", true}
+            {"flashbang", 55, 1000, "flashbang", true},
+            {"invisible", 75, 2000, "invisible", true},
+            {"shield", 45, 20000, "shield", false},
+            {"pause", 35, 0, "pause", true},
+            {"double_click", 65, 10000, "double_click", true},
+            {"force_reset", 100, 2000, "force_reset", true}
         };
     }
 
   private:
+    static PvpPowerupPlayerManaDto playerManaFromJson(matjson::Value const& json) {
+        PvpPowerupPlayerManaDto dto;
+        if (!json.isObject()) {
+            return dto;
+        }
+
+        dto.uid = getString(json, "uid");
+        dto.mana = static_cast<int>(getInteger(json, "mana"));
+        dto.maxMana = static_cast<int>(getInteger(json, "maxMana"));
+        if (dto.maxMana <= 0) {
+            dto.maxMana = 100;
+        }
+        return dto;
+    }
+
     static PvpPowerupSkillDto skillFromJson(matjson::Value const& json) {
         PvpPowerupSkillDto dto;
         if (!json.isObject()) {

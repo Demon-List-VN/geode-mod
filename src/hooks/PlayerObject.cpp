@@ -7,6 +7,9 @@ using namespace geode::prelude;
 class $modify(GDVNPlayerObject, PlayerObject) {
     bool pushButton(PlayerButton button) {
         auto overlay = PvpOverlayService::getActive();
+        if (overlay) {
+            overlay->registerForceResetClick();
+        }
         if (overlay && overlay->shouldBlockButtonDown(static_cast<int>(button), !m_isSecondPlayer)) {
             return false;
         }

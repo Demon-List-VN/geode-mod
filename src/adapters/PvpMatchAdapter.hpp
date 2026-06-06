@@ -150,6 +150,7 @@ class PvpMatchAdapter {
             dto.payloadEffect = getString(json["payload"], "effect");
             dto.payloadExpiresAt = getString(json["payload"], "expiresAt");
             dto.payloadSuppressedUntil = getString(json["payload"], "suppressedUntil");
+            dto.payloadRequiredClicks = static_cast<int>(getInteger(json["payload"], "requiredClicks"));
             dto.payloadDurationMs = static_cast<int>(getInteger(json["payload"], "durationMs"));
         }
         dto.nextLevelID = getInteger(json, "nextLevelId");

@@ -50,27 +50,27 @@ bool PvpPowerupPopup::init(PvpOverlayService* overlay) {
     skillTitle->setOpacity(180);
     m_mainLayer->addChildAtPosition(skillTitle, Anchor::TopLeft, {24.0f, -128.0f});
 
-    auto flashSprite = ButtonSprite::create("Flash 60", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto flashSprite = ButtonSprite::create("Flash 55", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     flashSprite->setScale(0.48f);
     m_flashButton = CCMenuItemExt::createSpriteExtra(flashSprite, [this](auto*) { this->cast("flashbang"); });
     m_buttonMenu->addChildAtPosition(m_flashButton, Anchor::BottomLeft, {62.0f, 72.0f});
 
-    auto invisibleSprite = ButtonSprite::create("Invis 100", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto invisibleSprite = ButtonSprite::create("Invis 75", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     invisibleSprite->setScale(0.48f);
     m_invisibleButton = CCMenuItemExt::createSpriteExtra(invisibleSprite, [this](auto*) { this->cast("invisible"); });
     m_buttonMenu->addChildAtPosition(m_invisibleButton, Anchor::Bottom, {0.0f, 72.0f});
 
-    auto shieldSprite = ButtonSprite::create("Shield 50", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto shieldSprite = ButtonSprite::create("Shield 45", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     shieldSprite->setScale(0.48f);
     m_shieldButton = CCMenuItemExt::createSpriteExtra(shieldSprite, [this](auto*) { this->cast("shield"); });
     m_buttonMenu->addChildAtPosition(m_shieldButton, Anchor::BottomRight, {-62.0f, 72.0f});
 
-    auto pauseSprite = ButtonSprite::create("Pause 40", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto pauseSprite = ButtonSprite::create("Pause 35", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     pauseSprite->setScale(0.48f);
     m_pauseButton = CCMenuItemExt::createSpriteExtra(pauseSprite, [this](auto*) { this->cast("pause"); });
     m_buttonMenu->addChildAtPosition(m_pauseButton, Anchor::BottomLeft, {62.0f, 38.0f});
 
-    auto doubleClickSprite = ButtonSprite::create("2Click 50", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto doubleClickSprite = ButtonSprite::create("2Click 65", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     doubleClickSprite->setScale(0.48f);
     m_doubleClickButton = CCMenuItemExt::createSpriteExtra(doubleClickSprite, [this](auto*) {
         this->cast("double_click");
@@ -261,21 +261,21 @@ int PvpPowerupPopup::skillCost(std::string const& skill) const {
     }
 
     if (skill == "flashbang") {
-        return 60;
+        return 55;
     }
     if (skill == "invisible") {
-        return 100;
+        return 75;
     }
     if (skill == "pause") {
-        return 40;
+        return 35;
     }
     if (skill == "double_click") {
-        return 50;
+        return 65;
     }
     if (skill == "force_reset") {
         return 100;
     }
-    return 50;
+    return 45;
 }
 
 bool PvpPowerupPopup::harmfulTargetAvailable() const {

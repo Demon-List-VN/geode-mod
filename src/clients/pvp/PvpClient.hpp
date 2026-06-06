@@ -39,7 +39,6 @@ class PvpClient {
                             std::string const& targetUid,
                             bool randomTarget,
                             CastPowerupCallback callback);
-
   private:
     static async::TaskHolder<web::WebResponse> s_putPlayModeHolder;
     static async::TaskHolder<web::WebResponse> s_putProgressHolder;

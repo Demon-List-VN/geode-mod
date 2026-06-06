@@ -302,6 +302,18 @@ bool PvpOverlayService::shouldBlockButtonRelease(int button, bool isPlayer1) {
     return false;
 }
 
+void PvpOverlayService::registerForceResetClick() {
+    if (m_forceResetTimer < 0.0f) {
+        return;
+    }
+
+    ++m_forceResetClicks;
+    if (m_forceResetClicks >= m_forceResetRequiredClicks) {
+        this->clearForceResetChallenge();
+        Notification::create("Force reset evaded!", NotificationIcon::Success)->show();
+    }
+}
+
 void PvpOverlayService::requestMatch() {
     if (!AuthService::isLoggedIn() || m_cleanedUp) {
         return;
@@ -624,7 +636,7 @@ void PvpOverlayService::handleRealtimeMessage(PvpMatchRealtimeMessageDto const& 
     if (message.table == gdvn::consts::Table::PVP_MATCH_RESULTS) {
         auto row = PvpMatchAdapter::playerProgressFromJson(message.row);
         this->handleResultRow(row);
-        if (row.valid && row.uid == m_currentUid && m_scoringMode == "powerup") {
+        if (row.valid && m_scoringMode == "powerup") {
             this->schedulePowerupStateRefresh();
         }
         this->refreshLabel();
@@ -635,6 +647,9 @@ void PvpOverlayService::handleRealtimeMessage(PvpMatchRealtimeMessageDto const& 
     } else if (message.table == gdvn::consts::WebsocketEvent::MESSAGE_TABLE) {
         log::info("Versus realtime chat event received: match={}, id={}", message.rowMatchID, message.rowID);
         this->handleMessageRow(PvpMessageAdapter::fromJson(message.row), true);
+        if (this->isPowerupMode()) {
+            this->schedulePowerupStateRefresh();
+        }
         this->scheduleMessageRefresh();
     }
 }
@@ -889,12 +904,19 @@ void PvpOverlayService::handlePowerupSkill(PvpMatchSystemMetadataDto const& meta
 
     auto effect = metadata.payloadEffect.empty() ? metadata.skill : metadata.payloadEffect;
     auto expiresAtEpoch = gdvn::utils::date::parseIsoEpochSeconds(metadata.payloadExpiresAt);
-    if (expiresAtEpoch > 0 && expiresAtEpoch < gdvn::utils::date::currentEpochSeconds()) {
+    auto nowEpoch = gdvn::utils::date::currentEpochSeconds();
+    if (expiresAtEpoch > 0 && expiresAtEpoch < nowEpoch) {
         return;
     }
 
     auto durationMs = metadata.payloadDurationMs > 0 ? metadata.payloadDurationMs : metadata.durationMs;
     auto durationSeconds = std::max(0.1f, static_cast<float>(durationMs > 0 ? durationMs : 1000) / 1000.0f);
+    if (expiresAtEpoch > 0) {
+        durationSeconds = std::max(
+            0.1f,
+            std::min(durationSeconds, static_cast<float>(expiresAtEpoch - nowEpoch))
+        );
+    }
 
     if (effect == "flashbang") {
         this->startFlashbang(durationSeconds);
@@ -917,10 +939,7 @@ void PvpOverlayService::handlePowerupSkill(PvpMatchSystemMetadataDto const& meta
     }
 
     if (effect == "force_reset") {
-        auto suppressedUntilEpoch = gdvn::utils::date::parseIsoEpochSeconds(metadata.payloadSuppressedUntil);
-        if (suppressedUntilEpoch <= 0 || suppressedUntilEpoch >= gdvn::utils::date::currentEpochSeconds()) {
-            this->forceReset();
-        }
+        this->startForceResetChallenge(metadata, durationSeconds);
     }
 }
 
@@ -1000,6 +1019,25 @@ void PvpOverlayService::clearDoubleClick() {
     m_doubleClickTimer = -1.0f;
     m_doubleClickWaitingButtons.clear();
     m_doubleClickBlockedButtons.clear();
+}
+
+void PvpOverlayService::startForceResetChallenge(
+    PvpMatchSystemMetadataDto const& metadata,
+    float durationSeconds
+) {
+    this->clearForceResetChallenge();
+    m_forceResetRequiredClicks = std::max(1, metadata.payloadRequiredClicks);
+    m_forceResetTimer = durationSeconds;
+    Notification::create(
+        fmt::format("Force reset! Click {} times in 2 seconds.", m_forceResetRequiredClicks),
+        NotificationIcon::Warning
+    )->show();
+}
+
+void PvpOverlayService::clearForceResetChallenge() {
+    m_forceResetTimer = -1.0f;
+    m_forceResetClicks = 0;
+    m_forceResetRequiredClicks = 10;
 }
 
 void PvpOverlayService::openPauseLayer() {
@@ -1110,21 +1148,31 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
 std::string PvpOverlayService::formatPlayerLabel(std::string const& label,
                                                  PvpOverlayPlayerProgressModel const& player) const {
     auto modeSuffix = player.playMode == "practice" ? " (practice)" : "";
-    return fmt::format("{}{}: {}", label, modeSuffix, formatProgressLabel(player.progress));
+    return fmt::format("{}{}: {}{}", label, modeSuffix, formatProgressLabel(player.progress),
+                       this->formatPlayerMana(player.uid));
 }
 
-std::string PvpOverlayService::formatPowerupManaLine() const {
+std::string PvpOverlayService::formatPlayerMana(std::string const& uid) const {
     if (!this->isPowerupMode()) {
         return "";
     }
 
     if (!m_powerupStateLoaded) {
-        return "\nMana: --/100";
+        return " | Mana: --/100";
     }
 
-    auto maxMana = std::max(1, m_powerupState.maxMana);
-    auto mana = std::max(0, std::min(m_powerupState.mana, maxMana));
-    return fmt::format("\nMana: {}/{}", mana, maxMana);
+    auto found = std::find_if(
+        m_powerupState.playerMana.begin(),
+        m_powerupState.playerMana.end(),
+        [&uid](PvpPowerupPlayerManaDto const& item) { return item.uid == uid; }
+    );
+    if (found == m_powerupState.playerMana.end()) {
+        return " | Mana: 0/100";
+    }
+
+    auto maxMana = std::max(1, found->maxMana);
+    auto mana = std::max(0, std::min(found->mana, maxMana));
+    return fmt::format(" | Mana: {}/{}", mana, maxMana);
 }
 
 std::string PvpOverlayService::participantLabel(std::string const& uid) const {
@@ -1279,6 +1327,14 @@ void PvpOverlayService::update(float dt) {
         }
     }
 
+    if (m_forceResetTimer >= 0.0f) {
+        m_forceResetTimer -= dt;
+        if (m_forceResetTimer <= 0.0f) {
+            this->clearForceResetChallenge();
+            this->forceReset();
+        }
+    }
+
     if (m_active && m_matchEndsAtEpoch > 0) {
         auto countdownSeconds =
             std::max<std::int64_t>(0, m_matchEndsAtEpoch - gdvn::utils::date::currentEpochSeconds());
@@ -1367,6 +1423,8 @@ void PvpOverlayService::cleanup() {
     m_cleanedUp = true;
     this->clearFlashbang();
     this->clearInvisible();
+    this->clearDoubleClick();
+    this->clearForceResetChallenge();
     this->closeRealtime();
 
     if (s_activeOverlay == this) {
@@ -1398,7 +1456,6 @@ void PvpOverlayService::refreshLabel() {
             : -1;
     auto timerLine =
         countdownSeconds >= 0 ? fmt::format("\nTime: {}", gdvn::utils::date::formatCountdown(countdownSeconds)) : "";
-    auto manaLine = this->formatPowerupManaLine();
     m_lastCountdownSeconds = countdownSeconds;
 
     if (m_hideOverlayForLevelChange) {
@@ -1406,9 +1463,23 @@ void PvpOverlayService::refreshLabel() {
         return;
     }
 
-    if (this->isCustomRoomMatch()) {
+    if (this->isPowerupMode()) {
+        auto title = this->isCustomRoomMatch() ? "gdvn.net - Custom room" : "gdvn.net - Versus";
+        auto text = title + timerLine;
+        auto players = this->sortedPlayers();
+        auto visibleCount = std::min<size_t>(players.size(), 5);
+        for (size_t index = 0; index < visibleCount; ++index) {
+            auto const& player = players[index];
+            text += "\n";
+            text += this->formatPlayerLabel(this->participantLabel(player.uid), player);
+        }
+        if (players.size() > visibleCount) {
+            text += "\n...";
+        }
+        m_overlay->setText(text);
+    } else if (this->isCustomRoomMatch()) {
         auto title = "gdvn.net - Custom room";
-        auto text = title + timerLine + manaLine;
+        auto text = title + timerLine;
         auto players = this->sortedPlayers();
         for (auto const& player : players) {
             text += "\n";
@@ -1416,7 +1487,7 @@ void PvpOverlayService::refreshLabel() {
         }
         m_overlay->setText(text);
     } else {
-        m_overlay->setText(fmt::format("gdvn.net - Versus{}{}\n{}\n{}", timerLine, manaLine,
+        m_overlay->setText(fmt::format("gdvn.net - Versus{}\n{}\n{}", timerLine,
                                        formatPlayerLabel("You", m_self), formatPlayerLabel("Opponent", m_opponent)));
     }
     this->setOverlayVisible(m_active);
