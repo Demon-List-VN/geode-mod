@@ -1477,13 +1477,18 @@ void PvpOverlayService::refreshLabel() {
             text += "\n...";
         }
         m_overlay->setText(text);
-    } else if (this->isCustomRoomMatch()) {
-        auto title = "gdvn.net - Custom room";
+    } else if (this->isCustomRoomMatch() || m_players.size() > 2) {
+        auto title = this->isCustomRoomMatch() ? "gdvn.net - Custom room" : "gdvn.net - Versus";
         auto text = title + timerLine;
         auto players = this->sortedPlayers();
-        for (auto const& player : players) {
+        auto visibleCount = m_players.size() > 2 ? std::min<size_t>(players.size(), 5) : players.size();
+        for (size_t index = 0; index < visibleCount; ++index) {
+            auto const& player = players[index];
             text += "\n";
             text += this->formatPlayerLabel(this->participantLabel(player.uid), player);
+        }
+        if (players.size() > visibleCount) {
+            text += "\n...";
         }
         m_overlay->setText(text);
     } else {
