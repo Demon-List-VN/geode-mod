@@ -29,7 +29,7 @@ PvpPowerupPopup* PvpPowerupPopup::create(PvpOverlayService* overlay) {
 }
 
 bool PvpPowerupPopup::init(PvpOverlayService* overlay) {
-    if (!Popup::init(390.0f, 240.0f)) {
+    if (!Popup::init(410.0f, 270.0f)) {
         return false;
     }
 
@@ -48,27 +48,44 @@ bool PvpPowerupPopup::init(PvpOverlayService* overlay) {
     auto skillTitle = CCLabelBMFont::create("Skill", "bigFont.fnt");
     skillTitle->setScale(0.32f);
     skillTitle->setOpacity(180);
-    m_mainLayer->addChildAtPosition(skillTitle, Anchor::TopLeft, {24.0f, -136.0f});
+    m_mainLayer->addChildAtPosition(skillTitle, Anchor::TopLeft, {24.0f, -128.0f});
 
-    auto flashSprite = ButtonSprite::create("Flash 60", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto flashSprite = ButtonSprite::create("Flash 55", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     flashSprite->setScale(0.48f);
     m_flashButton = CCMenuItemExt::createSpriteExtra(flashSprite, [this](auto*) { this->cast("flashbang"); });
-    m_buttonMenu->addChildAtPosition(m_flashButton, Anchor::BottomLeft, {62.0f, 46.0f});
+    m_buttonMenu->addChildAtPosition(m_flashButton, Anchor::BottomLeft, {62.0f, 72.0f});
 
-    auto invisibleSprite = ButtonSprite::create("Invis 100", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto invisibleSprite = ButtonSprite::create("Invis 40", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     invisibleSprite->setScale(0.48f);
     m_invisibleButton = CCMenuItemExt::createSpriteExtra(invisibleSprite, [this](auto*) { this->cast("invisible"); });
-    m_buttonMenu->addChildAtPosition(m_invisibleButton, Anchor::Bottom, {0.0f, 46.0f});
+    m_buttonMenu->addChildAtPosition(m_invisibleButton, Anchor::Bottom, {0.0f, 72.0f});
 
-    auto shieldSprite = ButtonSprite::create("Shield 50", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    auto shieldSprite = ButtonSprite::create("Shield 45", "goldFont.fnt", "GJ_button_01.png", 0.8f);
     shieldSprite->setScale(0.48f);
     m_shieldButton = CCMenuItemExt::createSpriteExtra(shieldSprite, [this](auto*) { this->cast("shield"); });
-    m_buttonMenu->addChildAtPosition(m_shieldButton, Anchor::BottomRight, {-62.0f, 46.0f});
+    m_buttonMenu->addChildAtPosition(m_shieldButton, Anchor::BottomRight, {-62.0f, 72.0f});
+
+    auto pauseSprite = ButtonSprite::create("Pause 35", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    pauseSprite->setScale(0.48f);
+    m_pauseButton = CCMenuItemExt::createSpriteExtra(pauseSprite, [this](auto*) { this->cast("pause"); });
+    m_buttonMenu->addChildAtPosition(m_pauseButton, Anchor::BottomLeft, {62.0f, 38.0f});
+
+    auto doubleClickSprite = ButtonSprite::create("2Click 65", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    doubleClickSprite->setScale(0.48f);
+    m_doubleClickButton = CCMenuItemExt::createSpriteExtra(doubleClickSprite, [this](auto*) {
+        this->cast("double_click");
+    });
+    m_buttonMenu->addChildAtPosition(m_doubleClickButton, Anchor::Bottom, {0.0f, 38.0f});
+
+    auto resetSprite = ButtonSprite::create("Reset 100", "goldFont.fnt", "GJ_button_01.png", 0.8f);
+    resetSprite->setScale(0.48f);
+    m_forceResetButton = CCMenuItemExt::createSpriteExtra(resetSprite, [this](auto*) { this->cast("force_reset"); });
+    m_buttonMenu->addChildAtPosition(m_forceResetButton, Anchor::BottomRight, {-62.0f, 38.0f});
 
     m_statusLabel = CCLabelBMFont::create("Loading...", "bigFont.fnt");
     m_statusLabel->setScale(0.3f);
     m_statusLabel->setOpacity(190);
-    m_mainLayer->addChildAtPosition(m_statusLabel, Anchor::Bottom, {0.0f, 17.0f});
+    m_mainLayer->addChildAtPosition(m_statusLabel, Anchor::Bottom, {0.0f, 14.0f});
 
     this->rebuildTargets();
     this->updateControls();
@@ -96,6 +113,15 @@ void PvpPowerupPopup::refresh() {
         this->updateControls();
         this->release();
     });
+}
+
+void PvpPowerupPopup::applyState(PvpPowerupStateDto const& state) {
+    if (!state.valid) {
+        return;
+    }
+
+    m_state = state;
+    this->updateControls();
 }
 
 void PvpPowerupPopup::closeFromOverlay() {
@@ -159,6 +185,15 @@ void PvpPowerupPopup::updateControls() {
     }
     if (m_shieldButton) {
         m_shieldButton->setEnabled(!m_loading && !m_state.shieldActive && m_state.mana >= this->skillCost("shield"));
+    }
+    if (m_pauseButton) {
+        m_pauseButton->setEnabled(!m_loading && hasTarget && m_state.mana >= this->skillCost("pause"));
+    }
+    if (m_doubleClickButton) {
+        m_doubleClickButton->setEnabled(!m_loading && hasTarget && m_state.mana >= this->skillCost("double_click"));
+    }
+    if (m_forceResetButton) {
+        m_forceResetButton->setEnabled(!m_loading && hasTarget && m_state.mana >= this->skillCost("force_reset"));
     }
 }
 
@@ -226,12 +261,21 @@ int PvpPowerupPopup::skillCost(std::string const& skill) const {
     }
 
     if (skill == "flashbang") {
-        return 60;
+        return 55;
     }
     if (skill == "invisible") {
+        return 40;
+    }
+    if (skill == "pause") {
+        return 35;
+    }
+    if (skill == "double_click") {
+        return 65;
+    }
+    if (skill == "force_reset") {
         return 100;
     }
-    return 50;
+    return 45;
 }
 
 bool PvpPowerupPopup::harmfulTargetAvailable() const {

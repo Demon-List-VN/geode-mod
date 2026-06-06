@@ -23,6 +23,9 @@ struct PvpMatchSystemMetadataDto {
     std::string targetUid;
     std::string revealAt;
     std::string payloadEffect;
+    std::string payloadExpiresAt;
+    std::string payloadSuppressedUntil;
+    int payloadRequiredClicks = 0;
     int durationMs = 0;
     int payloadDurationMs = 0;
     std::int64_t nextLevelID = 0;
