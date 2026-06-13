@@ -40,6 +40,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "4.2.2"
+
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
