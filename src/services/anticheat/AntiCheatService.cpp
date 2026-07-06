@@ -68,6 +68,7 @@ std::optional<std::string_view> AntiCheatService::getCheatedReason() const {
 void AntiCheatService::reset(PlayLayer* playLayer) {
     this->playLayer = playLayer;
     reportedCheat = false;
+    checksDisabled = false;
     reportedCheatReason.clear();
 
     startPositionAntiCheat.reset(playLayer);
@@ -81,6 +82,10 @@ void AntiCheatService::reset(PlayLayer* playLayer) {
     noclipAntiCheat.reset(playLayer);
 
     markRunCheatedIfNeeded();
+}
+
+void AntiCheatService::disableChecks() {
+    checksDisabled = true;
 }
 
 void AntiCheatService::markRunCheated(std::string const& reason) const {
@@ -99,12 +104,20 @@ void AntiCheatService::markRunCheated(std::string const& reason) const {
 }
 
 void AntiCheatService::markRunCheatedIfNeeded() const {
+    if (checksDisabled) {
+        return;
+    }
+
     if (auto reason = getCheatedReason()) {
         markRunCheated(std::string(*reason));
     }
 }
 
 void AntiCheatService::onUpdate(float dt) {
+    if (checksDisabled) {
+        return;
+    }
+
     startPositionAntiCheat.onUpdate(dt);
     withConfigBasedCheatChecks([&] {
         eclipseAntiCheat.onUpdate(dt);
@@ -119,13 +132,25 @@ void AntiCheatService::onUpdate(float dt) {
 }
 
 void AntiCheatService::onPlayerDestroyed(PlayerObject* player) {
+    if (checksDisabled) {
+        return;
+    }
+
     noclipAntiCheat.onPlayerDestroyed(player);
     markRunCheatedIfNeeded();
 }
 
 bool AntiCheatService::isCheated() const {
+    if (reportedCheat) {
+        return true;
+    }
+
+    if (checksDisabled) {
+        return false;
+    }
+
     markRunCheatedIfNeeded();
-    return getCheatedReason().has_value();
+    return reportedCheat;
 }
 
 std::string_view AntiCheatService::getCheatReason() const {

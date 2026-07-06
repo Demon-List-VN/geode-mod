@@ -21,6 +21,7 @@ class AntiCheatService : public AntiCheatInterface {
   private:
     PlayLayer* playLayer = nullptr;
     mutable bool reportedCheat = false;
+    bool checksDisabled = false;
     mutable std::string reportedCheatReason;
     StartPositionAntiCheatService startPositionAntiCheat;
     EclipseAntiCheatService eclipseAntiCheat;
@@ -38,6 +39,7 @@ class AntiCheatService : public AntiCheatInterface {
     explicit AntiCheatService(PlayLayer* playLayer);
 
     void reset(PlayLayer* playLayer) override;
+    void disableChecks();
     void onUpdate(float dt) override;
     void onPlayerDestroyed(PlayerObject* player) override;
     bool isCheated() const override;

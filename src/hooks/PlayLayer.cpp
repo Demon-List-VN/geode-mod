@@ -152,6 +152,11 @@ class $modify(DTPlayLayer, PlayLayer) {
         }
     }
 
+    void playEndAnimationToPos(cocos2d::CCPoint position) {
+        m_fields->antiCheat.disableChecks();
+        PlayLayer::playEndAnimationToPos(position);
+    }
+
     void checkpointActivated(CheckpointGameObject* object) {
         PlayLayer::checkpointActivated(object);
 
