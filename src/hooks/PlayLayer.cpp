@@ -12,11 +12,16 @@
 #include <Geode/modify/PlayLayer.hpp> // DO NOT REMOVE
 #include <Geode/utils/web.hpp>
 #include <algorithm>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_set>
 
 using namespace geode::prelude;
+
+namespace {
+constexpr auto DEATH_COUNT_PAUSE_COOLDOWN = std::chrono::seconds(10);
+}
 
 class $modify(DTPlayLayer, PlayLayer) {
     struct Fields {
@@ -32,6 +37,7 @@ class $modify(DTPlayLayer, PlayLayer) {
         std::unordered_set<int> platformerCheckpointIds;
         int platformerCheckpointCount = 0;
         bool lastPracticeMode = false;
+        std::chrono::steady_clock::time_point lastPauseDeathCountSubmit;
     };
 
     static void onModify(auto& self) {
@@ -96,6 +102,23 @@ class $modify(DTPlayLayer, PlayLayer) {
     void togglePracticeMode(bool practiceMode) {
         PlayLayer::togglePracticeMode(practiceMode);
         submitPvpPlayModeIfChanged(true);
+    }
+
+    void pauseGame(bool pausedByUser) {
+        PlayLayer::pauseGame(pausedByUser);
+
+        if (m_level->isPlatformer() || m_isPracticeMode || m_fields->antiCheat.isCheated()) {
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        if (m_fields->lastPauseDeathCountSubmit.time_since_epoch().count() != 0 &&
+            now - m_fields->lastPauseDeathCountSubmit < DEATH_COUNT_PAUSE_COOLDOWN) {
+            return;
+        }
+
+        m_fields->lastPauseDeathCountSubmit = now;
+        m_fields->deathCounter.submit();
     }
 
     void destroyPlayer(PlayerObject* player, GameObject* p1) {
