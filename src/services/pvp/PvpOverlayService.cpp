@@ -681,9 +681,11 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
         if (!row.name.empty()) {
             existing->name = row.name;
         }
-        existing->progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
-            ? row.progress
-            : std::max(existing->progress, row.progress);
+        if (existing->deathProgress < 0.0f) {
+            existing->progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+                ? row.progress
+                : std::max(existing->progress, row.progress);
+        }
     }
 
     if (!m_currentUid.empty() && row.uid == m_currentUid) {
@@ -691,9 +693,14 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
         if (!row.name.empty()) {
             m_self.name = row.name;
         }
-        m_self.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
-            ? row.progress
-            : std::max(m_self.progress, row.progress);
+        if (m_self.deathProgress < 0.0f) {
+            m_self.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+                ? row.progress
+                : std::max(m_self.progress, row.progress);
+        }
+        if (m_submitter) {
+            m_submitter->setBestProgress(row.progress);
+        }
         return;
     }
 
@@ -701,9 +708,11 @@ void PvpOverlayService::handleResultRow(PvpMatchPlayerProgressDto const& row) {
     if (!row.name.empty()) {
         m_opponent.name = row.name;
     }
-    m_opponent.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
-        ? row.progress
-        : std::max(m_opponent.progress, row.progress);
+    if (m_opponent.deathProgress < 0.0f) {
+        m_opponent.progress = (m_scoringMode == "hp" || m_scoringMode == "powerup")
+            ? row.progress
+            : std::max(m_opponent.progress, row.progress);
+    }
     if (m_scoringMode == "progress" && row.progress >= 100.0f && m_submitter) {
         m_submitter->flushDeathCount();
     }
@@ -785,7 +794,7 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
             }
             return;
         }
-        isProgressSystemMessage = kind == "progress" || kind == "hp_damage";
+        isProgressSystemMessage = kind == "progress" || kind == "progress_run" || kind == "death" || kind == "hp_damage";
         isHiddenSystemMessage = kind == "play_mode";
         this->handleSystemMetadata(metadata);
 
@@ -838,12 +847,95 @@ void PvpOverlayService::handleMessageRow(PvpMessageDto const& dto, bool animateN
     }
 }
 
+void PvpOverlayService::startPlayerProgressRun(std::string const& uid, float progress, float progressSpeed) {
+    if (uid.empty()) {
+        return;
+    }
+
+    const float nextProgress = std::max(0.0f, std::min(100.0f, progress));
+    const float nextSpeed = std::max(0.0f, progressSpeed);
+    auto start = [=](PvpOverlayPlayerProgressModel& player) {
+        if (player.uid != uid) {
+            return;
+        }
+        player.progress = std::max(player.progress, nextProgress);
+        player.progressSpeed = nextSpeed;
+        player.deathProgress = -1.0f;
+        player.progressRunning = true;
+    };
+
+    start(m_self);
+    start(m_opponent);
+    for (auto& player : m_players) {
+        start(player);
+    }
+}
+
+void PvpOverlayService::stopPlayerProgressRun(std::string const& uid, float progress) {
+    if (uid.empty()) {
+        return;
+    }
+
+    const float nextProgress = std::max(0.0f, std::min(100.0f, progress));
+    auto stop = [=](PvpOverlayPlayerProgressModel& player) {
+        if (player.uid != uid) {
+            return;
+        }
+        player.progress = nextProgress;
+        player.progressSpeed = 0.0f;
+        player.deathProgress = nextProgress;
+        player.progressRunning = false;
+    };
+
+    stop(m_self);
+    stop(m_opponent);
+    for (auto& player : m_players) {
+        stop(player);
+    }
+}
+
+bool PvpOverlayService::updatePlayerProgressRuns(float dt) {
+    if (!std::isfinite(dt) || dt <= 0.0f) {
+        return false;
+    }
+
+    bool changed = false;
+    auto update = [&changed, dt](PvpOverlayPlayerProgressModel& player) {
+        if (!player.progressRunning || player.progressSpeed <= 0.0f) {
+            return;
+        }
+        const float nextProgress = std::min(100.0f, player.progress + player.progressSpeed * dt);
+        changed = changed || nextProgress != player.progress;
+        player.progress = nextProgress;
+    };
+
+    update(m_self);
+    update(m_opponent);
+    for (auto& player : m_players) {
+        update(player);
+    }
+
+    return changed;
+}
+
 void PvpOverlayService::handleSystemMetadata(PvpMatchSystemMetadataDto const& metadata) {
     if (!metadata.valid) {
         return;
     }
 
     auto kind = metadata.kind;
+
+    if (kind == "progress_run") {
+        this->startPlayerProgressRun(metadata.uid, metadata.progress, metadata.progressSpeed);
+        this->refreshLabel();
+        return;
+    }
+
+    if (kind == "death") {
+        this->stopPlayerProgressRun(metadata.uid, metadata.progress);
+        this->refreshLabel();
+        return;
+    }
 
     if (kind == "powerup_skill") {
         this->handlePowerupSkill(metadata);
@@ -1091,6 +1183,15 @@ std::string PvpOverlayService::formatSystemMessage(PvpMatchSystemMetadataDto con
         return fmt::format("{} reached {} progress.", player, formattedProgress);
     }
 
+    if (kind == "progress_run") {
+        return fmt::format("{} is getting new progress!", this->participantLabel(metadata.uid));
+    }
+
+    if (kind == "death") {
+        return fmt::format("{} died at {} progress.", this->participantLabel(metadata.uid),
+                           formatProgressForMode(metadata.progress, "classic"));
+    }
+
     if (kind == "powerup_skill") {
         auto skill = powerupSkillLabel(metadata.skill);
         return fmt::format("{} used {} on {}.", this->participantLabel(metadata.casterUid), skill,
@@ -1305,6 +1406,10 @@ void PvpOverlayService::update(float dt) {
     }
     this->processPendingRevealMessages();
     this->updateRecentMessages(dt);
+
+    if (this->updatePlayerProgressRuns(dt)) {
+        this->refreshLabel();
+    }
 
     if (m_flashbangTimer >= 0.0f) {
         m_flashbangTimer -= dt;

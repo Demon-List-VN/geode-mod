@@ -86,6 +86,26 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
     });
 }
 
+void PvpClient::postProgressRun(int matchID, float progress, float progressSpeed, Callback callback) {
+    web::WebRequest req;
+    std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress-run";
+    auto body = matjson::Value::object();
+    body["progress"] = progress;
+    body["progressSpeed"] = progressSpeed;
+    req.bodyJSON(body);
+    req.header("Authorization", "Bearer " + gdvn::config::getToken());
+
+    auto holder = std::make_shared<async::TaskHolder<web::WebResponse>>();
+    PvpClient::s_postHolders.push_back(holder);
+    holder->spawn(req.post(url), [callback, holder](web::WebResponse res) {
+        auto& holders = PvpClient::s_postHolders;
+        holders.erase(std::remove(holders.begin(), holders.end(), holder), holders.end());
+
+        EmptyResponseDto dto;
+        callback(dto, res);
+    });
+}
+
 void PvpClient::postDeathProgress(int matchID, float progress, Callback callback) {
     web::WebRequest req;
     std::string url =

@@ -61,8 +61,13 @@ PvpSubmitterService::PvpSubmitterService(int levelID, std::string playMode)
                         PvpSubmitterService::submitScoreSubmission(locked);
                     } else {
                         locked->pendingScoreSubmissions.clear();
-                        PvpSubmitterService::submitProgress(locked, locked->completionPending);
-                        PvpSubmitterService::submitDeathCount(locked);
+                        for (auto progress : locked->pendingDeathProgresses) {
+                            PvpSubmitterService::submitDeathProgress(locked, progress);
+                        }
+                        locked->pendingDeathProgresses.clear();
+                        if (locked->completionPending) {
+                            PvpSubmitterService::submitProgress(locked, true);
+                        }
                     }
                 }
             }
@@ -200,6 +205,37 @@ void PvpSubmitterService::submitDeathCount(std::shared_ptr<State> state) {
         });
 }
 
+void PvpSubmitterService::submitDeathProgress(std::shared_ptr<State> state, float progress) {
+    if (!state || !state->inPvp.load() || state->platformer || state->scoreMode || state->matchID <= 0
+        || !isLevelValid(state)) {
+        return;
+    }
+
+    const int matchID = state->matchID;
+    PvpClient::postDeathProgress(matchID, progress, [matchID, progress](EmptyResponseDto const&, web::WebResponse& res) {
+        if (!res.ok()) {
+            log::warn("Failed to submit Versus death progress {} for match {}: HTTP {}", progress, matchID,
+                      res.code());
+        }
+    });
+}
+
+void PvpSubmitterService::announceProgressRun(std::shared_ptr<State> state, float progress, float progressSpeed) {
+    if (!state || !state->inPvp.load() || state->platformer || state->scoreMode || state->matchID <= 0
+        || !isLevelValid(state)) {
+        return;
+    }
+
+    const int matchID = state->matchID;
+    PvpClient::postProgressRun(matchID, progress, progressSpeed,
+                               [matchID, progress, progressSpeed](EmptyResponseDto const&, web::WebResponse& res) {
+                                   if (!res.ok()) {
+                                       log::warn("Failed to announce Versus progress run {} at {}/s for match {}: HTTP {}",
+                                                 progress, progressSpeed, matchID, res.code());
+                                   }
+                               });
+}
+
 void PvpSubmitterService::submitScoreSubmission(std::shared_ptr<State> state) {
     if (!state || !state->inPvp.load() || state->platformer || !state->scoreMode || state->matchID <= 0
         || !isLevelValid(state) || state->pendingScoreSubmissions.empty()) {
@@ -327,6 +363,42 @@ void PvpSubmitterService::record(float progress) {
     submit(completed);
 }
 
+void PvpSubmitterService::recordRunProgress(float progress, float dt) {
+    if (!m_state || m_state->platformer || m_state->scoreMode || !std::isfinite(progress) || progress <= 0.0f
+        || progress >= 100.0f || !std::isfinite(dt) || dt < 0.0f) {
+        return;
+    }
+
+    if (!m_state->matchLookupCompleted || !m_state->inPvp.load() || !isLevelValid(m_state)) {
+        return;
+    }
+
+    if (progress <= m_state->best) {
+        return;
+    }
+
+    if (!m_state->progressRunActive) {
+        m_state->progressRunActive = true;
+        m_state->progressRunAnnounced = false;
+        m_state->progressRunSnapshot = progress;
+        m_state->progressRunElapsed = 0.0f;
+        return;
+    }
+
+    if (m_state->progressRunAnnounced) {
+        return;
+    }
+
+    m_state->progressRunElapsed += dt;
+    if (m_state->progressRunElapsed < 1.0f) {
+        return;
+    }
+
+    const float speed = std::max(0.0f, (progress - m_state->progressRunSnapshot) / m_state->progressRunElapsed);
+    m_state->progressRunAnnounced = true;
+    announceProgressRun(m_state, progress, speed);
+}
+
 void PvpSubmitterService::recordDeath(float progress) {
     if (!m_state || m_state->platformer || !std::isfinite(progress) || progress < 0.0f || progress > 100.0f) {
         return;
@@ -345,20 +417,25 @@ void PvpSubmitterService::recordDeath(float progress) {
         return;
     }
 
-    const int percent = std::clamp(static_cast<int>(deathProgress), 0, 99);
-    m_state->pendingDeathCount[percent]++;
-    if (deathProgress > m_state->best) {
-        m_state->best = deathProgress;
-        submit();
-        if (m_state->inPvp.load()) {
-            flushDeathCount();
-        }
+    m_state->progressRunActive = false;
+    m_state->progressRunAnnounced = false;
+    m_state->progressRunElapsed = 0.0f;
+    m_state->best = std::max(m_state->best, deathProgress);
+
+    if (!m_state->matchLookupCompleted) {
+        m_state->pendingDeathProgresses.push_back(deathProgress);
         return;
     }
 
-    if (m_state->inPvp.load() && sumDeathCount(m_state->pendingDeathCount) >= 100) {
-        flushDeathCount();
+    submitDeathProgress(m_state, deathProgress);
+}
+
+void PvpSubmitterService::setBestProgress(float progress) {
+    if (!m_state || !std::isfinite(progress) || progress < 0.0f) {
+        return;
     }
+
+    m_state->best = std::max(m_state->best, progress);
 }
 
 void PvpSubmitterService::flushDeathCount() {
@@ -376,9 +453,14 @@ void PvpSubmitterService::resetProgressState() {
     }
 
     m_state->best = 0.0f;
+    m_state->progressRunSnapshot = 0.0f;
+    m_state->progressRunElapsed = 0.0f;
     m_state->pendingDeathCount = {};
+    m_state->pendingDeathProgresses.clear();
     m_state->pendingScoreSubmissions.clear();
     m_state->completionPending = false;
+    m_state->progressRunActive = false;
+    m_state->progressRunAnnounced = false;
     m_state->deathSubmitInFlight.store(false);
     m_state->scoreSubmitInFlight.store(false);
 }

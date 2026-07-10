@@ -9,6 +9,7 @@ struct PvpMatchSystemMetadataDto {
     std::string uid;
     std::string playMode;
     float progress = 0.0f;
+    float progressSpeed = 0.0f;
     float damage = 0.0f;
     std::string mode;
     std::string scoringMode = "progress";

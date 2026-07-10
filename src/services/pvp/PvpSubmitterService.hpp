@@ -20,12 +20,17 @@ class PvpSubmitterService {
         int matchID = 0;
         int matchLevelID = 0;
         float best = 0;
+        float progressRunSnapshot = 0;
+        float progressRunElapsed = 0;
         std::array<size_t, 100> pendingDeathCount = {};
+        std::vector<float> pendingDeathProgresses;
         std::vector<ScoreSubmission> pendingScoreSubmissions;
         std::atomic<bool> deathSubmitInFlight{false};
         std::atomic<bool> scoreSubmitInFlight{false};
         bool platformer = false;
         bool completionPending = false;
+        bool progressRunActive = false;
+        bool progressRunAnnounced = false;
         bool scoreMode = false;
         bool matchLookupCompleted = false;
         std::string playMode = "normal";
@@ -41,6 +46,8 @@ class PvpSubmitterService {
     void submit(bool completed = false);
     static void submitProgress(std::shared_ptr<State> state, bool completed = false);
     static void submitDeathCount(std::shared_ptr<State> state);
+    static void submitDeathProgress(std::shared_ptr<State> state, float progress);
+    static void announceProgressRun(std::shared_ptr<State> state, float progress, float progressSpeed);
     static void submitScoreSubmission(std::shared_ptr<State> state);
     static void submitPlayMode(std::shared_ptr<State> state, std::string const& playMode);
     static bool isLevelValid(std::shared_ptr<State> state);
@@ -55,7 +62,9 @@ class PvpSubmitterService {
     void setMatchLevelID(int levelID);
     void submitPlayMode(std::string const& playMode);
     void record(float progress);
+    void recordRunProgress(float progress, float dt);
     void recordDeath(float progress);
+    void setBestProgress(float progress);
     void flushDeathCount();
     void resetProgressState();
     void recordCheckpoint(int count);

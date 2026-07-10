@@ -86,6 +86,10 @@ class $modify(DTPlayLayer, PlayLayer) {
             m_fields->pvpOverlay->update(dt);
         }
 
+        if (!m_level->isPlatformer() && !m_isPracticeMode && m_fields->pvpSubmitter) {
+            m_fields->pvpSubmitter->recordRunProgress(this->getCurrentPercent(), dt);
+        }
+
         submitPvpPlayModeIfChanged();
     }
 
