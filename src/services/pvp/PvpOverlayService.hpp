@@ -154,9 +154,10 @@ class PvpOverlayService final {
     void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
     void handleMessageRow(PvpMessageDto const& message, bool animateNew);
     void handleSystemMetadata(PvpMatchSystemMetadataDto const& metadata);
-    void startPlayerProgressRun(std::string const& uid, float progress, float progressSpeed);
+    void startPlayerProgressRun(std::string const& uid, float progress, float progressSpeed,
+                                std::int64_t sampledAtMs = 0);
     void stopPlayerProgressRun(std::string const& uid, float progress);
-    bool updatePlayerProgressRuns(float dt);
+    bool updatePlayerProgressRuns();
     void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
     std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PvpOverlayPlayerProgressModel const& player) const;

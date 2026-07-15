@@ -7,6 +7,8 @@ struct ActivePvpMatchResponseDto {
     bool valid = false;
     int matchID = 0;
     int levelID = 0;
+    float bestProgress = 0.0f;
+    std::string currentUid;
     std::string mode;
     std::string scoringMode = "progress";
     int targetScore = 0;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 
 struct PvpOverlayPlayerProgressModel {
@@ -9,5 +10,6 @@ struct PvpOverlayPlayerProgressModel {
     float progressSpeed = 0.0f;
     float deathProgress = -1.0f;
     bool progressRunning = false;
+    std::chrono::steady_clock::time_point progressUpdatedAt;
     std::string playMode = "normal";
 };

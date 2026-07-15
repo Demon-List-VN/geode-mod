@@ -7,6 +7,9 @@ struct PvpMatchSystemMetadataDto {
     bool valid = false;
     std::string kind;
     std::string uid;
+    std::string attemptID;
+    std::string sampledAt;
+    std::int64_t sampledAtMs = 0;
     std::string playMode;
     float progress = 0.0f;
     float progressSpeed = 0.0f;

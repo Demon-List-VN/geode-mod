@@ -69,13 +69,17 @@ void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback c
     });
 }
 
-void PvpClient::putProgress(int matchID, float progress, bool completed, Callback callback) {
+void PvpClient::putProgress(int matchID, float progress, bool completed, Callback callback,
+                            std::string const& attemptID) {
     web::WebRequest req;
     std::string url =
         gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress?progress=" + std::to_string(progress);
 
     if (completed) {
         url += "&completed=true";
+    }
+    if (!attemptID.empty()) {
+        url += "&attemptId=" + attemptID;
     }
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
@@ -86,12 +90,16 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
     });
 }
 
-void PvpClient::postProgressRun(int matchID, float progress, float progressSpeed, Callback callback) {
+void PvpClient::postProgressRun(int matchID, float progress, float progressSpeed, std::string const& attemptID,
+                                Callback callback) {
     web::WebRequest req;
     std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress-run";
     auto body = matjson::Value::object();
     body["progress"] = progress;
     body["progressSpeed"] = progressSpeed;
+    if (!attemptID.empty()) {
+        body["attemptId"] = attemptID;
+    }
     req.bodyJSON(body);
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
@@ -106,7 +114,7 @@ void PvpClient::postProgressRun(int matchID, float progress, float progressSpeed
     });
 }
 
-void PvpClient::postDeathProgress(int matchID, float progress, Callback callback) {
+void PvpClient::postDeathProgress(int matchID, float progress, Callback callback, std::string const& attemptID) {
     web::WebRequest req;
     std::string url =
         gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?progress=" + std::to_string(progress);
@@ -114,6 +122,9 @@ void PvpClient::postDeathProgress(int matchID, float progress, Callback callback
     auto body = matjson::Value::object();
     body["progress"] = progress;
     body["count"] = singleDeathCount(progress);
+    if (!attemptID.empty()) {
+        body["attemptId"] = attemptID;
+    }
     req.bodyJSON(body);
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 

@@ -2,6 +2,7 @@
 
 #include "../dtos/pvp/ActivePvpMatchResponseDto.hpp"
 #include <Geode/Geode.hpp>
+#include <algorithm>
 #include <cstdint>
 
 class ActivePvpMatchResponseAdapter {
@@ -18,6 +19,9 @@ class ActivePvpMatchResponseAdapter {
         if (json["levelId"].isNumber()) {
             dto.levelID = static_cast<int>(json["levelId"].asDouble().unwrapOr(0.0));
         }
+
+        dto.currentUid = readString(json, "currentUid");
+        dto.bestProgress = readBestProgress(json, dto.currentUid);
 
         if (json["mode"].isString()) {
             dto.mode = json["mode"].asString().unwrapOrDefault();
@@ -58,6 +62,42 @@ class ActivePvpMatchResponseAdapter {
         }
 
         return static_cast<std::int64_t>(json[key].asDouble().unwrapOr(0.0));
+    }
+
+    static float readNumber(matjson::Value const& json, char const* key) {
+        if (!json[key].isNumber()) {
+            return 0.0f;
+        }
+
+        return static_cast<float>(json[key].asDouble().unwrapOr(0.0));
+    }
+
+    static float readBestProgress(matjson::Value const& json, std::string const& currentUid) {
+        if (currentUid.empty()) {
+            return 0.0f;
+        }
+
+        float best = 0.0f;
+        auto readRows = [&best, &currentUid](matjson::Value const& rows) {
+            if (!rows.isArray()) {
+                return;
+            }
+
+            for (auto const& row : rows.asArray().unwrap()) {
+                if (readString(row, "uid") != currentUid) {
+                    continue;
+                }
+
+                best = std::max(best, readNumber(row, "progress"));
+                if (row["result"].isObject()) {
+                    best = std::max(best, readNumber(row["result"], "progress"));
+                }
+            }
+        };
+
+        readRows(json["participants"]);
+        readRows(json["results"]);
+        return best;
     }
 
     static std::string readScoringMode(matjson::Value const& json) {
