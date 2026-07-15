@@ -92,8 +92,8 @@ class $modify(DTPlayLayer, PlayLayer) {
             m_fields->pvpOverlay->update(dt);
         }
 
-        if (!m_level->isPlatformer() && !m_isPracticeMode && m_fields->pvpSubmitter) {
-            m_fields->pvpSubmitter->recordRunProgress(this->getCurrentPercent(), dt);
+        if (m_fields->pvpSubmitter) {
+            m_fields->pvpSubmitter->updateDeathCountSubmission();
         }
 
         submitPvpPlayModeIfChanged();
@@ -107,6 +107,12 @@ class $modify(DTPlayLayer, PlayLayer) {
     void pauseGame(bool pausedByUser) {
         PlayLayer::pauseGame(pausedByUser);
 
+        if (m_fields->pvpOverlay) {
+            m_fields->pvpOverlay->setLocalPaused(true);
+        } else if (m_fields->pvpSubmitter) {
+            m_fields->pvpSubmitter->setPaused(true, this->getCurrentPercent());
+        }
+
         if (m_level->isPlatformer() || m_isPracticeMode || m_fields->antiCheat.isCheated()) {
             return;
         }
@@ -119,6 +125,16 @@ class $modify(DTPlayLayer, PlayLayer) {
 
         m_fields->lastPauseDeathCountSubmit = now;
         m_fields->deathCounter.submit();
+    }
+
+    void resume() {
+        PlayLayer::resume();
+
+        if (m_fields->pvpOverlay) {
+            m_fields->pvpOverlay->setLocalPaused(false);
+        } else if (m_fields->pvpSubmitter) {
+            m_fields->pvpSubmitter->setPaused(false, this->getCurrentPercent());
+        }
     }
 
     void destroyPlayer(PlayerObject* player, GameObject* p1) {
@@ -149,6 +165,9 @@ class $modify(DTPlayLayer, PlayLayer) {
         m_fields->eventSubmitter->record(progress);
         m_fields->raidSubmitter->record(progress);
         m_fields->pvpSubmitter->recordDeath(progress);
+        if (m_fields->pvpOverlay) {
+            m_fields->pvpOverlay->applyLocalDeathProgress(progress);
+        }
         m_fields->tournamentContestSubmitter->record(progress);
     }
 

@@ -44,6 +44,8 @@ class PvpOverlayService final {
     bool isChatUsable() const;
     bool isChatMuted() const;
     void setChatMuted(bool muted);
+    void setLocalPaused(bool paused);
+    void applyLocalDeathProgress(float progress);
     void submitChatMessage(std::string content);
     bool openPowerups();
     bool isPowerupMode() const;
@@ -154,10 +156,8 @@ class PvpOverlayService final {
     void handleMessagesPayload(PvpMessagesResponseDto const& messages, bool animateNew);
     void handleMessageRow(PvpMessageDto const& message, bool animateNew);
     void handleSystemMetadata(PvpMatchSystemMetadataDto const& metadata);
-    void startPlayerProgressRun(std::string const& uid, float progress, float progressSpeed,
-                                std::int64_t sampledAtMs = 0);
-    void stopPlayerProgressRun(std::string const& uid, float progress);
-    bool updatePlayerProgressRuns();
+    void applyPlayerProgress(std::string const& uid, float progress);
+    void setPlayerPaused(std::string const& uid, bool paused);
     void parseMatchSnapshot(PvpMatchSnapshotDto const& snapshot);
     std::string formatSystemMessage(PvpMatchSystemMetadataDto const& metadata) const;
     std::string formatPlayerLabel(std::string const& label, PvpOverlayPlayerProgressModel const& player) const;

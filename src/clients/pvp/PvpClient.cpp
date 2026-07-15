@@ -6,25 +6,8 @@
 #include "../../adapters/PvpPowerupAdapter.hpp"
 #include "../../consts/ConfigConst.hpp"
 #include <algorithm>
-#include <cmath>
 #include <memory>
 #include <vector>
-
-namespace {
-std::string singleDeathCount(float progress) {
-    std::string count;
-    const int percent = std::clamp(static_cast<int>(std::floor(progress)), 0, 99);
-
-    for (int i = 0; i < 100; i++) {
-        count += i == percent ? "1" : "0";
-        if (i < 99) {
-            count += "|";
-        }
-    }
-
-    return count;
-}
-} // namespace
 
 async::TaskHolder<web::WebResponse> PvpClient::s_putPlayModeHolder;
 async::TaskHolder<web::WebResponse> PvpClient::s_putProgressHolder;
@@ -69,17 +52,33 @@ void PvpClient::putPlayMode(int matchID, std::string const& playMode, Callback c
     });
 }
 
-void PvpClient::putProgress(int matchID, float progress, bool completed, Callback callback,
-                            std::string const& attemptID) {
+void PvpClient::putPauseState(int matchID, bool paused, float progress, Callback callback) {
+    web::WebRequest req;
+    std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/pause-state";
+    auto body = matjson::Value::object();
+    body["paused"] = paused;
+    body["progress"] = progress;
+    req.bodyJSON(body);
+    req.header("Authorization", "Bearer " + gdvn::config::getToken());
+
+    auto holder = std::make_shared<async::TaskHolder<web::WebResponse>>();
+    PvpClient::s_postHolders.push_back(holder);
+    holder->spawn(req.put(url), [callback, holder](web::WebResponse res) {
+        auto& holders = PvpClient::s_postHolders;
+        holders.erase(std::remove(holders.begin(), holders.end(), holder), holders.end());
+
+        EmptyResponseDto dto;
+        callback(dto, res);
+    });
+}
+
+void PvpClient::putProgress(int matchID, float progress, bool completed, Callback callback) {
     web::WebRequest req;
     std::string url =
         gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress?progress=" + std::to_string(progress);
 
     if (completed) {
         url += "&completed=true";
-    }
-    if (!attemptID.empty()) {
-        url += "&attemptId=" + attemptID;
     }
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
@@ -90,41 +89,14 @@ void PvpClient::putProgress(int matchID, float progress, bool completed, Callbac
     });
 }
 
-void PvpClient::postProgressRun(int matchID, float progress, float progressSpeed, std::string const& attemptID,
-                                Callback callback) {
-    web::WebRequest req;
-    std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/progress-run";
-    auto body = matjson::Value::object();
-    body["progress"] = progress;
-    body["progressSpeed"] = progressSpeed;
-    if (!attemptID.empty()) {
-        body["attemptId"] = attemptID;
-    }
-    req.bodyJSON(body);
-    req.header("Authorization", "Bearer " + gdvn::config::getToken());
-
-    auto holder = std::make_shared<async::TaskHolder<web::WebResponse>>();
-    PvpClient::s_postHolders.push_back(holder);
-    holder->spawn(req.post(url), [callback, holder](web::WebResponse res) {
-        auto& holders = PvpClient::s_postHolders;
-        holders.erase(std::remove(holders.begin(), holders.end(), holder), holders.end());
-
-        EmptyResponseDto dto;
-        callback(dto, res);
-    });
-}
-
-void PvpClient::postDeathProgress(int matchID, float progress, Callback callback, std::string const& attemptID) {
+void PvpClient::postDeathProgress(int matchID, float progress, Callback callback) {
     web::WebRequest req;
     std::string url =
         gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?progress=" + std::to_string(progress);
 
     auto body = matjson::Value::object();
     body["progress"] = progress;
-    body["count"] = singleDeathCount(progress);
-    if (!attemptID.empty()) {
-        body["attemptId"] = attemptID;
-    }
+    body["recordDeathCount"] = false;
     req.bodyJSON(body);
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 
@@ -141,7 +113,8 @@ void PvpClient::postDeathProgress(int matchID, float progress, Callback callback
 
 void PvpClient::postDeathCount(int matchID, std::string const& count, Callback callback) {
     web::WebRequest req;
-    std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) + "/deaths?count=" + count;
+    std::string url = gdvn::config::API_URL + "/pvp/matches/" + std::to_string(matchID) +
+        "/deaths?count=" + count + "&recordDeathScore=false";
 
     req.header("Authorization", "Bearer " + gdvn::config::getToken());
 

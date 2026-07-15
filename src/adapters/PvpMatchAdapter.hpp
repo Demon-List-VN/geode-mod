@@ -130,12 +130,9 @@ class PvpMatchAdapter {
         dto.valid = true;
         dto.kind = getString(json, "kind");
         dto.uid = getString(json, "uid");
-        dto.attemptID = getString(json, "attemptId");
-        dto.sampledAt = getString(json, "sampledAt");
-        dto.sampledAtMs = getInteger(json, "sampledAtMs");
+        dto.paused = json["paused"].isBool() && json["paused"].asBool().unwrapOr(false);
         dto.playMode = getString(json, "playMode");
         dto.progress = getNumber(json, "progress");
-        dto.progressSpeed = getNumber(json, "progressSpeed");
         dto.damage = getNumber(json, "damage");
         dto.mode = getString(json, "mode");
         dto.scoringMode = getScoringMode(json);

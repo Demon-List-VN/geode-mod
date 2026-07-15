@@ -28,12 +28,9 @@ class PvpClient {
 
     static void getMatch(int matchID, GetMatchCallback callback);
     static void putPlayMode(int matchID, std::string const& playMode, Callback callback);
-    static void putProgress(int matchID, float progress, bool completed, Callback callback,
-                            std::string const& attemptID = "");
-    static void postProgressRun(int matchID, float progress, float progressSpeed, std::string const& attemptID,
-                                Callback callback);
-    static void postDeathProgress(int matchID, float progress, Callback callback,
-                                  std::string const& attemptID = "");
+    static void putPauseState(int matchID, bool paused, float progress, Callback callback);
+    static void putProgress(int matchID, float progress, bool completed, Callback callback);
+    static void postDeathProgress(int matchID, float progress, Callback callback);
     static void postDeathCount(int matchID, std::string const& count, Callback callback);
     static void getMessages(int matchID, std::int64_t afterID, int limit, GetMessagesCallback callback);
     static void postMessage(int matchID, std::string const& content, PostMessageCallback callback);
